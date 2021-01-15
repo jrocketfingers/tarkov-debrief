@@ -1,33 +1,55 @@
-import React, { useEffect, useRef } from 'react';
-import { Stage, Layer, Rect, Text } from 'react-konva';
+import React, { useEffect, useRef, useState } from 'react';
+import { Stage, Layer, Rect, Image } from 'react-konva';
+import useImage from 'use-image';
+import woodsMapUrl from './woods.png';
 import './App.css';
 
 function App() {
-	const appRef = useRef(null);
-	const [width, setWidth] = useState(0);
-	const [height, setHeight] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
+  const [mapImage] = useImage(woodsMapUrl);
 
-	useEffect(() => {
-		setWidth(appRef.current.width);
-		setHeight(appRef.current.height);
-	});
+  useEffect(() => {
+    matchCanvasSize();
+    if(containerRef?.current) {
+      containerRef.current.addEventListener('resize', () => {
+        matchCanvasSize();
+      });
+    }
+  }, [containerRef]);
+
+  const matchCanvasSize = () => {
+    if(containerRef?.current) {
+      const {offsetWidth: width, offsetHeight: height} = containerRef.current;
+      setWidth(width);
+      setHeight(height);
+    }
+  }
 
   return (
-    <div className="App" ref={appRef} >
+    <div className="App">
       <header className="App-header">
-		  Tarkov Debrief
+        Tarkov Debrief
       </header>
-	  <Stage className="Canvas" width={width} height={height} >
-		  <Layer>
-			  <Rect
-			  	x={20}
-				y={20}
-				width={250}
-				height={250}
-				fill={"green"}
-			  />
-		  </Layer>
-	  </Stage>
+      <div className="Canvas" ref={containerRef}>
+        <Stage width={width} height={height}>
+          <Layer>
+            <Image
+              image={mapImage}
+              x={20}
+              y={20}
+            />
+            <Rect
+              x={20}
+              y={20}
+              width={250}
+              height={250}
+              fill={"green"}
+            />
+          </Layer>
+        </Stage>
+      </div>
     </div>
   );
 }
