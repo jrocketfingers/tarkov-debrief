@@ -11,6 +11,15 @@ type Size = { width: number; height: number };
 
 const defaultSize: Size = { width: 300, height: 300 };
 
+const freeDrawCanvas = document.createElement('canvas');
+const freeDrawCtx = freeDrawCanvas.getContext('2d');
+freeDrawCtx!.strokeStyle = '#df4b26';
+freeDrawCtx!.lineJoin = 'round';
+freeDrawCtx!.lineWidth = 5;
+
+let isPaint = false;
+let lastPointerPosition: Vector2d | null;
+
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const freeDrawImageRef = useRef<Konva.Image>(null);
@@ -18,22 +27,13 @@ function App() {
   const [{ width, height }, setSize] = useState<Size>(defaultSize);
   const [mapImage] = useImage(woodsMapUrl);
 
-  const freeDrawCanvas = document.createElement('canvas');
-  const freeDrawCtx = freeDrawCanvas.getContext('2d');
-  freeDrawCtx!.strokeStyle = '#df4b26';
-  freeDrawCtx!.lineJoin = 'round';
-  freeDrawCtx!.lineWidth = 5;
-
-  let isPaint = false;
-  let lastPointerPosition: Vector2d | null;
-
-  const mouseDownHandler = (ev: KonvaEventObject<MouseEvent>) => {
+  const mouseDownHandler = (ev: KonvaEventObject<MouseEvent|TouchEvent>) => {
     const stage = ev.currentTarget as Konva.Stage;
     lastPointerPosition = stage.getPointerPosition();
     isPaint = true;
   }
 
-  const mouseUpHandler = (ev: KonvaEventObject<MouseEvent>) => {
+  const mouseUpHandler = (ev: KonvaEventObject<MouseEvent|TouchEvent>) => {
     isPaint = false;
   }
 
@@ -71,9 +71,11 @@ function App() {
   useEffect(() => {
     function resizeListener() {
       if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        const height = containerRef.current.offsetHeight;
         setSize({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
+          width,
+          height
         });
         freeDrawCanvas.width = width;
         freeDrawCanvas.height = height;
@@ -98,9 +100,9 @@ function App() {
             width={width}
             height={height}
             onMouseDown={mouseDownHandler}
-            onTouchDown={mouseDownHandler}
+            onTouchStart={mouseDownHandler}
             onMouseUp={mouseUpHandler}
-            onTouchUp={mouseUpHandler}
+            onTouchEnd={mouseUpHandler}
             onMouseMove={mouseMoveHandler}
             onTouchMove={mouseMoveHandler}
           >
