@@ -20,9 +20,19 @@ freeDrawCtx!.lineWidth = 5;
 let isPaint = false;
 let lastPointerPosition: Vector2d | null;
 
+function startDownload(url: string, name: string) : void {
+  const link = document.createElement('a');
+  link.download = name;
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const freeDrawImageRef = useRef<Konva.Image>(null);
+  const stageRef = useRef<Konva.Stage>(null);
   const freeDrawLayerRef = useRef<Konva.Layer>(null);
   const [{ width, height }, setSize] = useState<Size>(defaultSize);
   const [mapImage] = useImage(woodsMapUrl);
@@ -67,6 +77,16 @@ function App() {
     layer!.batchDraw();
   }
 
+  const save = () => {
+    if (stageRef.current === null) {
+      return;
+    }
+
+    const stage = stageRef.current;
+    const url = stage.toDataURL();
+    startDownload(url, "startegy.png");
+  }
+
   // TODO consider useLayoutEffect
   useEffect(() => {
     function resizeListener() {
@@ -94,9 +114,13 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">Tarkov Debrief</header>
+      <header className="App-header">
+        <h1>Tarkov Debrief</h1>
+        <button onClick={save}>Save</button>
+      </header>
       <div className="Canvas" ref={containerRef}>
         <Stage
+            ref={stageRef}
             width={width}
             height={height}
             onMouseDown={mouseDownHandler}
@@ -107,8 +131,7 @@ function App() {
             onTouchMove={mouseMoveHandler}
           >
           <Layer ref={freeDrawLayerRef}>
-            {/*<Image image={mapImage} x={20} y={20} width={1000} height={500} />*/}
-            <Rect x={20} y={20} width={250} height={250} fill={"green"} />
+            <Image image={mapImage} x={20} y={20} width={1000} height={500} />
             <Image image={freeDrawCanvas} ref={freeDrawImageRef} />
           </Layer>
         </Stage>
