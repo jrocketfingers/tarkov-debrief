@@ -34,7 +34,8 @@ function App() {
   const freeDrawImageRef = useRef<Konva.Image>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const freeDrawLayerRef = useRef<Konva.Layer>(null);
-  const [{ width, height }, setSize] = useState<Size>(defaultSize);
+  const [{ width, height }, setStageSize] = useState<Size>(defaultSize);
+  const [{ width: mapWidth, height: mapHeight }, setMapSize] = useState<Size>(defaultSize);
   const [mapImage] = useImage(woodsMapUrl);
 
   const mouseDownHandler = (ev: KonvaEventObject<MouseEvent|TouchEvent>) => {
@@ -93,14 +94,31 @@ function App() {
       if (containerRef.current) {
         const width = containerRef.current.offsetWidth;
         const height = containerRef.current.offsetHeight;
-        setSize({
+        setStageSize({
           width,
           height
         });
+
+        const imageWidth = mapImage?.naturalWidth || defaultSize.width;
+        const imageHeight = mapImage?.naturalHeight || defaultSize.height;
+        const stageAspectRatio = width / height;
+        const imageAspectRatio = imageWidth / imageHeight;
+
+        let scaledImageWidth: number;
+        let scaledImageHeight: number;
+        if (stageAspectRatio > imageAspectRatio) {
+          scaledImageWidth = imageWidth * height / imageHeight;
+          scaledImageHeight = height;
+        } else {
+          scaledImageWidth = width;
+          scaledImageHeight = imageHeight * width / imageWidth;
+        }
+        setMapSize({ width: scaledImageWidth, height: scaledImageHeight});
+
         freeDrawCanvas.width = width;
         freeDrawCanvas.height = height;
       } else {
-        setSize(defaultSize);
+        setStageSize(defaultSize);
         freeDrawCanvas.width = defaultSize.width;
         freeDrawCanvas.height = defaultSize.height;
       }
@@ -133,7 +151,7 @@ function App() {
             onTouchMove={mouseMoveHandler}
           >
           <Layer ref={freeDrawLayerRef}>
-            <Image image={mapImage} x={20} y={20} width={1000} height={500} />
+            <Image image={mapImage} width={mapWidth} height={mapHeight} />
             <Image image={freeDrawCanvas} ref={freeDrawImageRef} />
           </Layer>
         </Stage>
