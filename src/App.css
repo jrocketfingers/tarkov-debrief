@@ -23,13 +23,24 @@
 
 .App-header {
   background-color: #282c34;
-  min-height: 100px;
+  min-height: 50px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   font-size: calc(10px + 2vmin);
-  color: white;
+  color: #9a8866;
+  padding: 1em;
+}
+
+.App-header-buttons > button {
+	padding: 0.5em 1em;
+	font-size: large;
+	font-weight: bolder;
+	font-family: 'Bender';
+	background: #9a8866;
+	color: black;
+	border: 0;
 }
 
 .App-link {

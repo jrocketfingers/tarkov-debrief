@@ -115,8 +115,10 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Tarkov Debrief</h1>
-        <button onClick={save}>Save</button>
+        <p className="title">Tarkov Debrief</p>
+        <section className="App-header-buttons">
+          <button onClick={save}>SAVE</button>
+        </section>
       </header>
       <div className="Canvas" ref={containerRef}>
         <Stage
