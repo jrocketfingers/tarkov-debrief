@@ -1,11 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Rect, Image } from "react-konva";
-import Konva from "konva";
-import useImage from "use-image";
+import { fabric } from "fabric";
 import woodsMapUrl from "./woods.png";
 import "./App.css";
-import { KonvaEventObject } from "konva/types/Node";
-import { Vector2d } from "konva/types/types";
 
 type Size = { width: number; height: number };
 
@@ -17,9 +13,6 @@ freeDrawCtx!.strokeStyle = '#df4b26';
 freeDrawCtx!.lineJoin = 'round';
 freeDrawCtx!.lineWidth = 5;
 
-let isPaint = false;
-let lastPointerPosition: Vector2d | null;
-
 function startDownload(url: string, name: string) : void {
   const link = document.createElement('a');
   link.download = name;
@@ -29,98 +22,54 @@ function startDownload(url: string, name: string) : void {
   document.body.removeChild(link);
 }
 
+function initializeCanvas() { 
+  const canvas = new fabric.Canvas('canvas', {
+    height: defaultSize.height,
+    width: defaultSize.width,
+    isDrawingMode: true,
+  });
+
+  canvas.freeDrawingBrush.color = 'red';
+  canvas.freeDrawingBrush.width = 5;
+
+  return canvas;
+}
+
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const freeDrawImageRef = useRef<Konva.Image>(null);
-  const stageRef = useRef<Konva.Stage>(null);
-  const freeDrawLayerRef = useRef<Konva.Layer>(null);
-  const [{ width, height }, setStageSize] = useState<Size>(defaultSize);
-  const [{ width: mapWidth, height: mapHeight }, setMapSize] = useState<Size>(defaultSize);
-  const [mapImage] = useImage(woodsMapUrl);
-
-  const mouseDownHandler = (ev: KonvaEventObject<MouseEvent|TouchEvent>) => {
-    const stage = ev.currentTarget as Konva.Stage;
-    lastPointerPosition = stage.getPointerPosition();
-    isPaint = true;
-  }
-
-  const mouseUpHandler = (ev: KonvaEventObject<MouseEvent|TouchEvent>) => {
-    isPaint = false;
-  }
-
-  const mouseMoveHandler = (ev: KonvaEventObject<MouseEvent|TouchEvent>) => {
-    if (!isPaint) {
-      return;
-    }
-
-    const stage = ev.currentTarget as Konva.Stage;
-
-    freeDrawCtx!.globalCompositeOperation = 'source-over';
-    freeDrawCtx?.beginPath();
-    const image = freeDrawImageRef.current;
-    const layer = freeDrawLayerRef.current;
-
-    var localPos = {
-      x: lastPointerPosition!.x - image!.x(),
-      y: lastPointerPosition!.y - image!.y()
-    };
-    freeDrawCtx!.moveTo(localPos.x, localPos.y);
-    var pos = stage.getPointerPosition();
-    localPos = {
-      x: pos!.x - image!.x(),
-      y: pos!.y - image!.y()
-    };
-    freeDrawCtx!.lineTo(localPos.x, localPos.y);
-    freeDrawCtx!.closePath();
-    freeDrawCtx!.stroke();
-
-    lastPointerPosition = pos;
-    layer!.batchDraw();
-  }
+  const [backgroundImage, setBackgroundImage] = useState<fabric.Image | null>(null);
+  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
 
   const save = () => {
-    if (stageRef.current === null) {
-      return;
+    if (canvas) {
+      const url = canvas.toDataURL({ multiplier: 3});
+      startDownload(url, "startegy.png");
     }
-
-    const stage = stageRef.current;
-    const url = stage.toDataURL();
-    startDownload(url, "startegy.png");
   }
 
   // TODO consider useLayoutEffect
   useEffect(() => {
+    if (!canvas) {
+      const canvas = initializeCanvas();
+      setCanvas(canvas);
+
+      fabric.Image.fromURL(woodsMapUrl, (image) => {
+        canvas!.add(image);
+        setBackgroundImage(image);
+      });
+    }
+
     function resizeListener() {
       if (containerRef.current) {
         const width = containerRef.current.offsetWidth;
         const height = containerRef.current.offsetHeight;
-        setStageSize({
-          width,
-          height
-        });
+        canvas?.setDimensions({ width, height });
 
-        const imageWidth = mapImage?.naturalWidth || defaultSize.width;
-        const imageHeight = mapImage?.naturalHeight || defaultSize.height;
-        const stageAspectRatio = width / height;
-        const imageAspectRatio = imageWidth / imageHeight;
-
-        let scaledImageWidth: number;
-        let scaledImageHeight: number;
-        if (stageAspectRatio > imageAspectRatio) {
-          scaledImageWidth = imageWidth * height / imageHeight;
-          scaledImageHeight = height;
-        } else {
-          scaledImageWidth = width;
-          scaledImageHeight = imageHeight * width / imageWidth;
+        if (backgroundImage) {
+          backgroundImage?.scaleToWidth(width)
         }
-        setMapSize({ width: scaledImageWidth, height: scaledImageHeight});
-
-        freeDrawCanvas.width = width;
-        freeDrawCanvas.height = height;
       } else {
-        setStageSize(defaultSize);
-        freeDrawCanvas.width = defaultSize.width;
-        freeDrawCanvas.height = defaultSize.height;
+        canvas?.setDimensions(defaultSize);
       }
     }
 
@@ -128,7 +77,7 @@ function App() {
 
     window.addEventListener("resize", resizeListener);
     return () => window.removeEventListener("resize", resizeListener);
-  }, [containerRef]);
+  }, [containerRef, backgroundImage, canvas]);
 
   return (
     <div className="App">
@@ -139,22 +88,8 @@ function App() {
         </section>
       </header>
       <div className="Canvas" ref={containerRef}>
-        <Stage
-            ref={stageRef}
-            width={width}
-            height={height}
-            onMouseDown={mouseDownHandler}
-            onTouchStart={mouseDownHandler}
-            onMouseUp={mouseUpHandler}
-            onTouchEnd={mouseUpHandler}
-            onMouseMove={mouseMoveHandler}
-            onTouchMove={mouseMoveHandler}
-          >
-          <Layer ref={freeDrawLayerRef}>
-            <Image image={mapImage} width={mapWidth} height={mapHeight} />
-            <Image image={freeDrawCanvas} ref={freeDrawImageRef} />
-          </Layer>
-        </Stage>
+        <canvas id="canvas">
+        </canvas>
       </div>
     </div>
   );
