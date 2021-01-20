@@ -2,6 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import woodsMapUrl from "./woods.png";
 import "./App.css";
+import selectIcon from "./icons/select.svg";
+import pencilIcon from "./icons/pencil.svg";
+import undoIcon from "./icons/undo.svg";
+import zoomIcon from "./icons/zoom.svg";
+import saveIcon from "./icons/save.svg";
 
 type Size = { width: number; height: number };
 
@@ -47,6 +52,18 @@ function App() {
     }
   }
 
+  const select = () => {
+    if (canvas) {
+      canvas.isDrawingMode = false;
+    }
+  }
+
+  const pencil = () => {
+    if (canvas) {
+      canvas.isDrawingMode = true;
+    }
+  }
+
   // TODO consider useLayoutEffect
   useEffect(() => {
     if (!canvas) {
@@ -54,7 +71,7 @@ function App() {
       setCanvas(canvas);
 
       fabric.Image.fromURL(woodsMapUrl, (image) => {
-        canvas!.add(image);
+        canvas!.backgroundImage = image;
         setBackgroundImage(image);
       });
     }
@@ -84,7 +101,11 @@ function App() {
       <header className="App-header">
         <p className="title">Tarkov Debrief</p>
         <section className="App-header-buttons">
-          <button onClick={save}>SAVE</button>
+          <button onClick={select}><img src={selectIcon} alt="select" /></button>
+          <button onClick={pencil}><img src={pencilIcon} alt="pencil" /></button>
+          <button><img src={undoIcon} alt="undo" /></button>
+          <button><img src={zoomIcon} alt="zoom" /></button>
+          <button onClick={save}><img className="App-header-buttons-save" src={saveIcon} alt="save" /></button>
         </section>
       </header>
       <div className="Canvas" ref={containerRef}>
