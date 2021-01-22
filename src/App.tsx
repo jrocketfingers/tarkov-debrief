@@ -55,7 +55,7 @@ function App() {
 
   const save = () => {
     if (canvas) {
-      const url = canvas.toDataURL({ multiplier: 3});
+      const url = canvas.toDataURL({ multiplier: 3 });
       startDownload(url, "startegy.png");
     }
   }
@@ -120,8 +120,7 @@ function App() {
         canvas.freeDrawingBrush.width = brushWidth / zoom;
         opt.e.preventDefault();
         opt.e.stopPropagation();
-      })
-
+      });
     }
 
     function resizeListener() {
@@ -154,7 +153,7 @@ function App() {
           <button onClick={select}><img src={selectIcon} alt="select" /></button>
           <button onClick={pencil}><img src={pencilIcon} alt="pencil" /></button>
           <button onClick={eraser}><img src={eraserIcon} alt="eraser" /></button>
-          <button><img src={undoIcon} alt="undo" /></button>
+          <button onClick={undo}><img src={undoIcon} alt="undo" /></button>
           <button><img src={zoomIcon} alt="zoom" /></button>
           <button onClick={save}><img className="App-header-buttons-save" src={saveIcon} alt="save" /></button>
         </section>
