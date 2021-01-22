@@ -150,7 +150,14 @@ function App() {
 
     resizeListener();
 
+    function undoListener({ key, ctrlKey }: KeyboardEvent) {
+      if(ctrlKey && key === "z") {
+        if (canvas) canvas.undo();
+      }
+    }
+
     window.addEventListener("resize", resizeListener);
+    document.addEventListener("keyup", undoListener);
     return () => {
       window.removeEventListener("resize", resizeListener);
     }
