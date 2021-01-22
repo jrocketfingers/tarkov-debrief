@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
+import "fabric-history";
 import woodsMapUrl from "./interchange.png";
 import "./App.css";
 import selectIcon from "./icons/select.svg";
@@ -12,6 +13,8 @@ import saveIcon from "./icons/save.svg";
 type Size = { width: number; height: number };
 
 const defaultSize: Size = { width: 300, height: 300 };
+let backgroundImage: fabric.Image;
+let unerasable = new Set<fabric.Object>();
 
 type Tool = { active: boolean, type: 'select' | 'pencil' | 'eraser' };
 
@@ -45,7 +48,6 @@ function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [tool, _setTool] = useState<Tool>({ type: 'pencil', active: true });
   const toolRef = useRef<Tool>({ type: 'pencil', active: true });
-  const [backgroundImage, setBackgroundImage] = useState<fabric.Image | null>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
 
   const setTool = (value: Tool) => {
@@ -83,6 +85,12 @@ function App() {
     }
   }
 
+  const undo = () => {
+    if (canvas) {
+      canvas.undo();
+    }
+  }
+
   // TODO consider useLayoutEffect
   useEffect(() => {
     if (!canvas) {
@@ -90,8 +98,12 @@ function App() {
       setCanvas(canvas);
 
       fabric.Image.fromURL(woodsMapUrl, (image) => {
-        canvas!.backgroundImage = image;
-        setBackgroundImage(image);
+        image.canvas = canvas;
+        image.selectable = false;
+        backgroundImage = image;
+        unerasable.add(backgroundImage);
+        canvas.add(image);
+        canvas!.clearHistory();
       });
 
       canvas.on('mouse:down', (opt) => {
@@ -104,7 +116,9 @@ function App() {
 
       canvas.on('mouse:move', (opt) => {
         if (opt.target === null) return;
-        if (toolRef.current.type === 'eraser' && toolRef.current.active) {
+        if (toolRef.current.type === 'eraser'
+            && toolRef.current.active
+            && !unerasable.has(opt.target!)) {
           canvas.remove(opt.target!);
         }
       });
@@ -128,12 +142,9 @@ function App() {
         const width = containerRef.current.offsetWidth;
         const height = containerRef.current.offsetHeight;
         canvas?.setDimensions({ width, height });
-
-        if (backgroundImage) {
-          backgroundImage?.scaleToWidth(width)
-        }
       } else {
         canvas?.setDimensions(defaultSize);
+        unerasable.add(backgroundImage);
       }
     }
 
@@ -143,7 +154,7 @@ function App() {
     return () => {
       window.removeEventListener("resize", resizeListener);
     }
-  }, [containerRef, backgroundImage, canvas]);
+  }, [containerRef, canvas]);
 
   return (
     <div className="App">
