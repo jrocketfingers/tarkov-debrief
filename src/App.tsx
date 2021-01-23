@@ -14,7 +14,7 @@ type Size = { width: number; height: number };
 
 const defaultSize: Size = { width: 300, height: 300 };
 let backgroundImage: fabric.Image;
-let unerasable = new Set<fabric.Object>();
+let unerasable = new Set<string>();
 
 type Tool = { active: boolean, type: 'select' | 'pencil' | 'eraser' };
 
@@ -101,7 +101,7 @@ function App() {
         image.canvas = canvas;
         image.selectable = false;
         backgroundImage = image;
-        unerasable.add(backgroundImage);
+        unerasable.add(backgroundImage.getSrc());
         canvas.add(image);
         canvas!.clearHistory();
       });
@@ -116,9 +116,9 @@ function App() {
 
       canvas.on('mouse:move', (opt) => {
         if (opt.target === null) return;
+        if (opt.target instanceof fabric.Image && unerasable.has(opt.target.getSrc())) return;
         if (toolRef.current.type === 'eraser'
-            && toolRef.current.active
-            && !unerasable.has(opt.target!)) {
+            && toolRef.current.active) {
           canvas.remove(opt.target!);
         }
       });
@@ -144,7 +144,6 @@ function App() {
         canvas?.setDimensions({ width, height });
       } else {
         canvas?.setDimensions(defaultSize);
-        unerasable.add(backgroundImage);
       }
     }
 
