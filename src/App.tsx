@@ -41,6 +41,8 @@ function initializeCanvas() {
   canvas.freeDrawingBrush.color = 'red';
   canvas.freeDrawingBrush.width = brushWidth;
 
+  canvas.setCursor(`url(${pencilIcon})`);
+
   return canvas;
 }
 
@@ -100,6 +102,7 @@ function App() {
       fabric.Image.fromURL(woodsMapUrl, (image) => {
         image.canvas = canvas;
         image.selectable = false;
+        image.hoverCursor = 'default';
         backgroundImage = image;
         unerasable.add(backgroundImage.getSrc());
         canvas.add(image);
@@ -171,7 +174,6 @@ function App() {
           <button onClick={pencil}><img src={pencilIcon} alt="pencil" /></button>
           <button onClick={eraser}><img src={eraserIcon} alt="eraser" /></button>
           <button onClick={undo}><img src={undoIcon} alt="undo" /></button>
-          <button><img src={zoomIcon} alt="zoom" /></button>
           <button onClick={save}><img className="App-header-buttons-save" src={saveIcon} alt="save" /></button>
         </section>
       </header>
