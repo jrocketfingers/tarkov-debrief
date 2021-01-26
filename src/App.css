@@ -1,3 +1,8 @@
+html, body {
+	height: 100%;
+	overflow-x: hidden;
+}
+
 .App {
   text-align: center;
   display: flex;
@@ -67,11 +72,32 @@
   color: #61dafb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+aside {
+	display: flex;
+	flex-direction: row;
+	height: 100vh;
+	width: 100vw;
+	z-index: 10;
+	position: absolute;
+	right: -100vw;
+}
+
+#sidebar {
+	background: #7B6C51;
+	width: 400px;
+	display: flex;
+	flex-direction: row;
+}
+
+#sidebar > button {
+	height: 70px;
+}
+
+#closeArea {
+	opacity: 0;
+	flex: 1;
+}
+
+aside.enter {
+	right: 0px;
 }
