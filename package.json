@@ -1,6 +1,7 @@
 {
   "name": "debrief",
   "version": "0.1.0",
+  "homepage": "https://jrocketfingers.github.io/tarkov-debrief",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.4",
@@ -13,6 +14,7 @@
     "@types/react-dom": "^16.9.8",
     "fabric": "^4.3.0",
     "fabric-history": "^1.6.0",
+    "gh-pages": "^3.1.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-scripts": "4.0.1",
@@ -22,7 +24,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+	"build": "react-scripts build",
+	"predeploy": "yarn build",
+	"deploy": "gh-pages -d build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
