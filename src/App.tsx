@@ -3,12 +3,19 @@ import { fabric } from "fabric";
 import "fabric-history";
 import woodsMapUrl from "./interchange.png";
 import "./App.css";
+
 import selectIcon from "./icons/select.svg";
 import pencilIcon from "./icons/pencil.svg";
 import eraserIcon from "./icons/eraser.svg";
 import undoIcon from "./icons/undo.svg";
-import zoomIcon from "./icons/zoom.svg";
+import addMarkerIcon from "./icons/marker.svg";
 import saveIcon from "./icons/save.svg";
+
+import thickPMCMarker from "./icons/pmc-thick.svg";
+import mediumPMCMarker from "./icons/pmc-med.svg";
+import lightPMCMarker from "./icons/pmc-light.svg";
+import scavMarker from "./icons/scav.svg";
+import { IEvent } from "fabric/fabric-impl";
 
 type Size = { width: number; height: number };
 
@@ -16,7 +23,12 @@ const defaultSize: Size = { width: 300, height: 300 };
 let backgroundImage: fabric.Image;
 let unerasable = new Set<string>();
 
-type Tool = { active: boolean, type: 'select' | 'pencil' | 'eraser' };
+type Tool = {
+  active: boolean,
+  type: 'select' | 'pencil' | 'eraser' | 'marker',
+  onClick: null | ((evt: IEvent) => void),
+  cursor: null | string,
+};
 
 function startDownload(url: string, name: string) : void {
   const link = document.createElement('a');
@@ -28,6 +40,7 @@ function startDownload(url: string, name: string) : void {
 }
 
 const brushWidth = 5;
+const markerCache: Record<string, fabric.Image> = {};
 
 function initializeCanvas() { 
   const canvas = new fabric.Canvas('canvas', {
@@ -48,13 +61,57 @@ function initializeCanvas() {
 
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [tool, _setTool] = useState<Tool>({ type: 'pencil', active: true });
-  const toolRef = useRef<Tool>({ type: 'pencil', active: true });
+  const [tool, _setTool] = useState<Tool>({
+    type: 'pencil',
+    active: true,
+    onClick: null,
+    cursor: null,
+  });
+  const toolRef = useRef<Tool>({
+    type: 'pencil',
+    active: true,
+    onClick: null,
+    cursor: null,
+  });
+  const [, _setMarker] = useState<string | null>(null);
+  const markerRef = useRef<string | null>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+  const [sidebar, setSidebar] = useState<boolean>(false);
 
+  /**
+   * Sets the current tool and resets canvas listeners.
+   * 
+   * @param value: Tool
+   */
   const setTool = (value: Tool) => {
+    // switch listeners (tool is old state, value is new)
+    if (canvas) {
+      if (tool.onClick) canvas.off('mouse:up', tool.onClick);
+      if (value.onClick) canvas.on('mouse:up', value.onClick);
+
+      if (value.cursor === null) {
+        canvas.defaultCursor = 'auto';
+        canvas.hoverCursor = 'auto';
+      } else {
+        canvas.defaultCursor = value.cursor;
+        canvas.hoverCursor = canvas.defaultCursor;
+      }
+
+      if (value.type === 'pencil') {
+        canvas.isDrawingMode = true;
+      } else {
+        canvas.isDrawingMode = false;
+      }
+    }
+    setSidebar(false);
+
     _setTool(value);
     toolRef.current = value;
+  }
+
+  const setMarker = (value: string) => {
+    _setMarker(value);
+    markerRef.current = value;
   }
 
   const save = () => {
@@ -65,7 +122,7 @@ function App() {
   }
 
   const select = () => {
-    setTool({...tool, type: 'select'});
+    setTool({...tool, type: 'select', cursor: null, onClick: null});
     if (canvas) {
       canvas.isDrawingMode = false;
       canvas.selection = true;
@@ -73,14 +130,14 @@ function App() {
   }
 
   const pencil = () => {
-    setTool({...tool, type: 'pencil'});
+    setTool({...tool, type: 'pencil', cursor: null, onClick: null});
     if (canvas) {
       canvas.isDrawingMode = true;
     }
   }
 
   const eraser = () => {
-    setTool({...tool, type: 'eraser'});
+    setTool({...tool, type: 'eraser', cursor: null, onClick: null});
     if (canvas) {
       canvas.isDrawingMode = false;
       canvas.selection = false;
@@ -93,6 +150,43 @@ function App() {
     }
   }
 
+  const showSidebar = () => {
+    setSidebar(true);
+  }
+
+  const hideSidebar = () => {
+    setSidebar(false);
+  }
+
+  const selectMarker = (evt: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    const target = evt.target as HTMLImageElement;
+    setMarker(target.src);
+
+    const cursor = `url(${target.src}), auto`;
+    setTool({...tool, type: 'marker', onClick: placeMarker, cursor});
+  }
+
+  const placeMarker = async (evt: IEvent) => {
+    if (markerRef && markerRef.current) {
+      let cachedImage = markerCache[markerRef.current];
+      if (!cachedImage) {
+        const newImage: fabric.Image = await new Promise(resolve => fabric.Image.fromURL(markerRef.current!, resolve));
+        markerCache[markerRef.current!] = newImage;
+        cachedImage = newImage;
+      }
+
+      const image: fabric.Image = await new Promise(resolve => cachedImage.clone(resolve));
+      const pointer = canvas!.getPointer(evt.e);
+      image.left = pointer.x;
+      image.top = pointer.y;
+
+      const zoom = canvas!.getZoom();
+      image.scale(1 / zoom);
+
+      canvas!.add(image);
+    }
+  }
+
   // TODO consider useLayoutEffect
   useEffect(() => {
     if (!canvas) {
@@ -102,7 +196,6 @@ function App() {
       fabric.Image.fromURL(woodsMapUrl, (image) => {
         image.canvas = canvas;
         image.selectable = false;
-        image.hoverCursor = 'default';
         backgroundImage = image;
         unerasable.add(backgroundImage.getSrc());
         canvas.add(image);
@@ -174,9 +267,19 @@ function App() {
           <button onClick={pencil}><img src={pencilIcon} alt="pencil" /></button>
           <button onClick={eraser}><img src={eraserIcon} alt="eraser" /></button>
           <button onClick={undo}><img src={undoIcon} alt="undo" /></button>
+          <button onClick={showSidebar}><img src={addMarkerIcon} alt="undo" /></button>
           <button onClick={save}><img className="App-header-buttons-save" src={saveIcon} alt="save" /></button>
         </section>
       </header>
+      <aside className={sidebar ? "enter" : ""}>
+        <section onClick={hideSidebar} id="closeArea"></section>
+        <section id="sidebar">
+          <button onClick={selectMarker}><img src={thickPMCMarker} alt="thick PMC" /></button>
+          <button onClick={selectMarker}><img src={mediumPMCMarker} alt="medium PMC" /></button>
+          <button onClick={selectMarker}><img src={lightPMCMarker} alt="light PMC" /></button>
+          <button onClick={selectMarker}><img src={scavMarker} alt="light PMC" /></button>
+        </section>
+      </aside>
       <div className="Canvas" ref={containerRef}>
         <canvas id="canvas">
         </canvas>
