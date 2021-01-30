@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
+import { ColorResult, TwitterPicker } from "react-color";
 import "fabric-history";
 import woodsMapUrl from "./interchange.png";
 import "./App.css";
+import "./Sidebar.css";
 
 import selectIcon from "./icons/select.svg";
 import pencilIcon from "./icons/pencil.svg";
@@ -41,6 +43,7 @@ function startDownload(url: string, name: string) : void {
 
 const brushWidth = 5;
 const markerCache: Record<string, fabric.Image> = {};
+const PENCIL_COLOR: string = "#f00";
 
 function initializeCanvas() { 
   const canvas = new fabric.Canvas('canvas', {
@@ -51,12 +54,28 @@ function initializeCanvas() {
     selection: false,
   });
 
-  canvas.freeDrawingBrush.color = 'red';
+  canvas.freeDrawingBrush.color = PENCIL_COLOR;
   canvas.freeDrawingBrush.width = brushWidth;
 
   canvas.setCursor(`url(${pencilIcon})`);
 
   return canvas;
+}
+
+interface SidebarSectionProps {
+  title: string,
+  children: React.ReactNode,
+}
+
+function SidebarSection({ title, children }: SidebarSectionProps) {
+  return <div className="sidebar-section">
+    <h1 className="sidebar-section-title">
+      {title}
+    </h1>
+    <div className="sidebar-section-content">
+      {children}
+    </div>
+  </div>
 }
 
 function App() {
@@ -73,6 +92,7 @@ function App() {
     onClick: null,
     cursor: null,
   });
+  const [color, setColor] = useState<string>(PENCIL_COLOR);
   const [, _setMarker] = useState<string | null>(null);
   const markerRef = useRef<string | null>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
@@ -112,6 +132,13 @@ function App() {
   const setMarker = (value: string) => {
     _setMarker(value);
     markerRef.current = value;
+  }
+
+  const changeColor = (color: ColorResult) => {
+    setColor(color.hex);
+    if (canvas) {
+      canvas.freeDrawingBrush.color = color.hex;
+    }
   }
 
   const save = () => {
@@ -274,10 +301,18 @@ function App() {
       <aside className={sidebar ? "enter" : ""}>
         <section onClick={hideSidebar} id="closeArea"></section>
         <section id="sidebar">
-          <button onClick={selectMarker}><img src={thickPMCMarker} alt="thick PMC" /></button>
-          <button onClick={selectMarker}><img src={mediumPMCMarker} alt="medium PMC" /></button>
-          <button onClick={selectMarker}><img src={lightPMCMarker} alt="light PMC" /></button>
-          <button onClick={selectMarker}><img src={scavMarker} alt="light PMC" /></button>
+          <SidebarSection title="Markers">
+            <button onClick={selectMarker}><img src={thickPMCMarker} alt="thick PMC" /></button>
+            <button onClick={selectMarker}><img src={mediumPMCMarker} alt="medium PMC" /></button>
+            <button onClick={selectMarker}><img src={lightPMCMarker} alt="light PMC" /></button>
+            <button onClick={selectMarker}><img src={scavMarker} alt="light PMC" /></button>
+          </SidebarSection>
+          <SidebarSection title="">
+            <TwitterPicker
+			  color={color}
+			  triangle="hide"
+              onChangeComplete={changeColor}></TwitterPicker>
+          </SidebarSection>
         </section>
       </aside>
       <div className="Canvas" ref={containerRef}>

@@ -35,7 +35,7 @@ html, body {
   justify-content: space-between;
   font-size: calc(10px + 2vmin);
   color: #9a8866;
-  padding: 1em;
+  padding: 0 1em;
 }
 
 .App-header-buttons {
@@ -70,34 +70,4 @@ html, body {
 
 .App-link {
   color: #61dafb;
-}
-
-aside {
-	display: flex;
-	flex-direction: row;
-	height: 100vh;
-	width: 100vw;
-	z-index: 10;
-	position: absolute;
-	right: -100vw;
-}
-
-#sidebar {
-	background: #7B6C51;
-	width: 400px;
-	display: flex;
-	flex-direction: row;
-}
-
-#sidebar > button {
-	height: 70px;
-}
-
-#closeArea {
-	opacity: 0;
-	flex: 1;
-}
-
-aside.enter {
-	right: 0px;
 }
