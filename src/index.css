@@ -20,8 +20,7 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 @font-face {
@@ -33,4 +32,25 @@ code {
 	font-family: 'Bender';
 	src: local('Bender'), url('./fonts/bender-black.woff') format('woff');
 	font-weight: bolder;
+}
+
+.App-header {
+	background-color: #282c34;
+	min-height: 50px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	color: #9a8866;
+	padding: 0 1em;
+}
+
+.App-header-title {
+  font-size: calc(10px + 2vmin);
+  color: #9a8866;
+  text-decoration: none;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+  margin-inline-start: 0px;
+  margin-inline-end: 0px;
 }

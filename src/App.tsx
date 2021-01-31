@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { ColorResult, TwitterPicker } from "react-color";
 import "fabric-history";
-import woodsMapUrl from "./interchange.png";
 import "./App.css";
 import "./Sidebar.css";
+
+import { maps } from "./MapSelector";
 
 import selectIcon from "./icons/select.svg";
 import pencilIcon from "./icons/pencil.svg";
@@ -18,6 +19,7 @@ import mediumPMCMarker from "./icons/pmc-med.svg";
 import lightPMCMarker from "./icons/pmc-light.svg";
 import scavMarker from "./icons/scav.svg";
 import { IEvent } from "fabric/fabric-impl";
+import { Link, useParams } from "react-router-dom";
 
 type Size = { width: number; height: number };
 
@@ -78,7 +80,12 @@ function SidebarSection({ title, children }: SidebarSectionProps) {
   </div>
 }
 
+interface Params {
+  map: string;
+}
+
 function App() {
+  const { map } = useParams<Params>();
   const containerRef = useRef<HTMLDivElement>(null);
   const [tool, _setTool] = useState<Tool>({
     type: 'pencil',
@@ -220,7 +227,7 @@ function App() {
       const canvas = initializeCanvas();
       setCanvas(canvas);
 
-      fabric.Image.fromURL(woodsMapUrl, (image) => {
+      fabric.Image.fromURL(maps[map], (image) => {
         image.canvas = canvas;
         image.selectable = false;
         backgroundImage = image;
@@ -288,7 +295,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <p className="title">Tarkov Debrief</p>
+        <Link className="App-header-title" to="/">Tarkov Debrief</Link>
         <section className="App-header-buttons">
           <button onClick={select}><img src={selectIcon} alt="select" /></button>
           <button onClick={pencil}><img src={pencilIcon} alt="pencil" /></button>
