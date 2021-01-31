@@ -31,6 +31,7 @@ type Tool = {
   active: boolean,
   type: 'select' | 'pencil' | 'eraser' | 'marker',
   onClick: null | ((evt: IEvent) => void),
+  onMouseMove: null | ((evt: IEvent) => void),
   cursor: null | string,
 };
 
@@ -91,12 +92,14 @@ function App() {
     type: 'pencil',
     active: true,
     onClick: null,
+    onMouseMove: null,
     cursor: null,
   });
   const toolRef = useRef<Tool>({
     type: 'pencil',
     active: true,
     onClick: null,
+    onMouseMove: null,
     cursor: null,
   });
   const [color, setColor] = useState<string>(PENCIL_COLOR);
@@ -111,11 +114,15 @@ function App() {
    * @param value: Tool
    */
   const setTool = (value: Tool) => {
-    // switch listeners (tool is old state, value is new)
     if (canvas) {
+      // switch listeners (tool is old state, value is new)
       if (tool.onClick) canvas.off('mouse:up', tool.onClick);
-      if (value.onClick) canvas.on('mouse:up', value.onClick);
+      if (tool.onMouseMove) canvas.off('mouse:move', tool.onMouseMove);
 
+      if (value.onClick) canvas.on('mouse:up', value.onClick);
+      if (value.onMouseMove) canvas.on('mouse:move', value.onMouseMove);
+
+      // set the cursor according to the tool
       if (value.cursor === null) {
         canvas.defaultCursor = 'auto';
         canvas.hoverCursor = 'auto';
@@ -155,7 +162,7 @@ function App() {
     }
   }
 
-  const select = () => {
+  const setSelect = () => {
     setTool({...tool, type: 'select', cursor: null, onClick: null});
     if (canvas) {
       canvas.isDrawingMode = false;
@@ -163,18 +170,25 @@ function App() {
     }
   }
 
-  const pencil = () => {
+  const setPencil = () => {
     setTool({...tool, type: 'pencil', cursor: null, onClick: null});
     if (canvas) {
       canvas.isDrawingMode = true;
     }
   }
 
-  const eraser = () => {
-    setTool({...tool, type: 'eraser', cursor: null, onClick: null});
+  const setEraser = () => {
+    setTool({...tool, type: 'eraser', cursor: null, onClick: null, onMouseMove: erase});
     if (canvas) {
       canvas.isDrawingMode = false;
       canvas.selection = false;
+    }
+  }
+
+  const erase = (opt: IEvent) => {
+    if(opt.target !== undefined && toolRef.current.active) {
+      if (opt.target instanceof fabric.Image && unerasable.has(opt.target.getSrc())) return;
+      canvas!.remove(opt.target!);
     }
   }
 
@@ -244,15 +258,6 @@ function App() {
         setTool({...toolRef.current, active: false});
       });
 
-      canvas.on('mouse:move', (opt) => {
-        if (opt.target === null) return;
-        if (opt.target instanceof fabric.Image && unerasable.has(opt.target.getSrc())) return;
-        if (toolRef.current.type === 'eraser'
-            && toolRef.current.active) {
-          canvas.remove(opt.target!);
-        }
-      });
-
       canvas.on('mouse:wheel', function(opt) {
         const event = opt.e as WheelEvent;
         const delta = event.deltaY;
@@ -297,9 +302,9 @@ function App() {
       <header className="App-header">
         <Link className="App-header-title" to="/">Tarkov Debrief</Link>
         <section className="App-header-buttons">
-          <button onClick={select}><img src={selectIcon} alt="select" /></button>
-          <button onClick={pencil}><img src={pencilIcon} alt="pencil" /></button>
-          <button onClick={eraser}><img src={eraserIcon} alt="eraser" /></button>
+          <button onClick={setSelect}><img src={selectIcon} alt="select" /></button>
+          <button onClick={setPencil}><img src={pencilIcon} alt="pencil" /></button>
+          <button onClick={setEraser}><img src={eraserIcon} alt="eraser" /></button>
           <button onClick={undo}><img src={undoIcon} alt="undo" /></button>
           <button onClick={showSidebar}><img src={addMarkerIcon} alt="undo" /></button>
           <button onClick={save}><img className="App-header-buttons-save" src={saveIcon} alt="save" /></button>
