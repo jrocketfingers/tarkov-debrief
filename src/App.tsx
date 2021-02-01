@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { ColorResult, TwitterPicker } from "react-color";
 import "fabric-history";
@@ -108,12 +108,19 @@ function App() {
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [sidebar, setSidebar] = useState<boolean>(false);
 
+  const erase = useCallback((opt: IEvent) => {
+    if(opt.target !== undefined && toolRef.current.active) {
+      if (opt.target instanceof fabric.Image && unerasable.has(opt.target.getSrc())) return;
+      canvas!.remove(opt.target!);
+    }
+  }, [canvas]);
+
   /**
    * Sets the current tool and resets canvas listeners.
    * 
    * @param value: Tool
    */
-  const setTool = (value: Tool) => {
+  const setTool = useCallback((value: Tool) => {
     if (canvas) {
       // switch listeners (tool is old state, value is new)
       if (tool.onClick) canvas.off('mouse:up', tool.onClick);
@@ -141,7 +148,7 @@ function App() {
 
     _setTool(value);
     toolRef.current = value;
-  }
+  }, [canvas, tool.onClick, tool.onMouseMove]);
 
   const setMarker = (value: string) => {
     _setMarker(value);
@@ -163,7 +170,7 @@ function App() {
   }
 
   const setSelect = () => {
-    setTool({...tool, type: 'select', cursor: null, onClick: null});
+    setTool({...tool, type: 'select', cursor: null, onClick: null, onMouseMove: null});
     if (canvas) {
       canvas.isDrawingMode = false;
       canvas.selection = true;
@@ -171,7 +178,7 @@ function App() {
   }
 
   const setPencil = () => {
-    setTool({...tool, type: 'pencil', cursor: null, onClick: null});
+    setTool({...tool, type: 'pencil', cursor: null, onClick: null, onMouseMove: null});
     if (canvas) {
       canvas.isDrawingMode = true;
     }
@@ -182,13 +189,6 @@ function App() {
     if (canvas) {
       canvas.isDrawingMode = false;
       canvas.selection = false;
-    }
-  }
-
-  const erase = (opt: IEvent) => {
-    if(opt.target !== undefined && toolRef.current.active) {
-      if (opt.target instanceof fabric.Image && unerasable.has(opt.target.getSrc())) return;
-      canvas!.remove(opt.target!);
     }
   }
 
@@ -295,7 +295,7 @@ function App() {
     return () => {
       window.removeEventListener("resize", resizeListener);
     }
-  }, [containerRef, canvas]);
+  }, [containerRef, canvas, setTool, map]);
 
   return (
     <div className="App">

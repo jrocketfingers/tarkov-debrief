@@ -38,7 +38,7 @@ function MapSelector() {
       </header>
       <section className="MapList">
         {Object.entries(maps).map(([key, value]) => 
-          <Link className="MapList-Card" to={`/app/${key}`}>
+          <Link key={key} className="MapList-Card" to={`/app/${key}`}>
             <img src={thumbnails[key]} alt="key"/>
             <p>{key}</p>
           </Link>
