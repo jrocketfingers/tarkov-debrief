@@ -29,7 +29,7 @@ let unerasable = new Set<string>();
 
 type Tool = {
   active: boolean,
-  type: 'select' | 'pencil' | 'eraser' | 'marker',
+  type: 'select' | 'pencil' | 'eraser' | 'marker' | 'pan',
   onClick: null | ((evt: IEvent) => void),
   onMouseMove: null | ((evt: IEvent) => void),
   cursor: null | string,
@@ -44,6 +44,7 @@ function startDownload(url: string, name: string) : void {
   document.body.removeChild(link);
 }
 
+const modifierTools = ['pan'];
 const brushWidth = 5;
 const markerCache: Record<string, fabric.Image> = {};
 const PENCIL_COLOR: string = "#f00";
@@ -88,6 +89,7 @@ interface Params {
 function App() {
   const { map } = useParams<Params>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const altKeyRef = useRef<boolean>(false);
   const [tool, _setTool] = useState<Tool>({
     type: 'pencil',
     active: true,
@@ -102,18 +104,57 @@ function App() {
     onMouseMove: null,
     cursor: null,
   });
+
+  const prevTool = useRef<Tool>({
+    type: 'pencil',
+    active: true,
+    onClick: null,
+    onMouseMove: null,
+    cursor: null,
+  });
+
+  const lastPosRef = useRef({x: 0, y: 0});
   const [color, setColor] = useState<string>(PENCIL_COLOR);
   const [, _setMarker] = useState<string | null>(null);
   const markerRef = useRef<string | null>(null);
-  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+  const canvasRef = useRef<fabric.Canvas | null>(null);
   const [sidebar, setSidebar] = useState<boolean>(false);
 
   const erase = useCallback((opt: IEvent) => {
     if(opt.target !== undefined && toolRef.current.active) {
       if (opt.target instanceof fabric.Image && unerasable.has(opt.target.getSrc())) return;
-      canvas!.remove(opt.target!);
+      canvasRef.current!.remove(opt.target!);
     }
-  }, [canvas]);
+  }, []);
+
+  const pan = useCallback(function (opt) {
+    const canvas = canvasRef.current;
+    var vpt = canvas!.viewportTransform;
+    vpt![4] += opt.e.clientX - lastPosRef.current.x;
+    vpt![5] += opt.e.clientY - lastPosRef.current.y;
+    canvas!.requestRenderAll();
+    lastPosRef.current = { x: opt.e.clientX, y: opt.e.clientY };
+  }, []);
+
+  const disableDrawing = useCallback(function (opt) {
+	const canvas = canvasRef.current
+	if (opt.key === 'Alt') {
+	  altKeyRef.current = true;
+	  if (canvas && tool.active === false) {
+		canvas!.isDrawingMode = false;
+	  }
+    }
+  }, [tool]);
+
+  const enableDrawing = useCallback(function (opt) {
+	const canvas = canvasRef.current
+	if (opt.key === 'Alt') {
+	  altKeyRef.current = false;
+	  if (canvas && tool.type === "pencil") {
+		canvas!.isDrawingMode = true;
+	  }
+    }
+  }, [tool]);
 
   /**
    * Sets the current tool and resets canvas listeners.
@@ -121,10 +162,11 @@ function App() {
    * @param value: Tool
    */
   const setTool = useCallback((value: Tool) => {
-    if (canvas) {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
       // switch listeners (tool is old state, value is new)
-      if (tool.onClick) canvas.off('mouse:up', tool.onClick);
-      if (tool.onMouseMove) canvas.off('mouse:move', tool.onMouseMove);
+      if (toolRef.current.onClick) canvas.off('mouse:up', toolRef.current.onClick);
+      if (toolRef.current.onMouseMove) canvas.off('mouse:move', toolRef.current.onMouseMove);
 
       if (value.onClick) canvas.on('mouse:up', value.onClick);
       if (value.onMouseMove) canvas.on('mouse:move', value.onMouseMove);
@@ -138,7 +180,7 @@ function App() {
         canvas.hoverCursor = canvas.defaultCursor;
       }
 
-      if (value.type === 'pencil') {
+      if (value.type === 'pencil' && altKeyRef.current === false) {
         canvas.isDrawingMode = true;
       } else {
         canvas.isDrawingMode = false;
@@ -148,7 +190,7 @@ function App() {
 
     _setTool(value);
     toolRef.current = value;
-  }, [canvas, tool.onClick, tool.onMouseMove]);
+  }, []);
 
   const setMarker = (value: string) => {
     _setMarker(value);
@@ -157,44 +199,43 @@ function App() {
 
   const changeColor = (color: ColorResult) => {
     setColor(color.hex);
-    if (canvas) {
-      canvas.freeDrawingBrush.color = color.hex;
+    if (canvasRef.current) {
+      canvasRef.current.freeDrawingBrush.color = color.hex;
     }
   }
 
   const save = () => {
-    if (canvas) {
-      const url = canvas.toDataURL({ multiplier: 3 });
+    if (canvasRef.current) {
+      const url = canvasRef.current.toDataURL({ multiplier: 3 });
       startDownload(url, "startegy.png");
     }
   }
 
   const setSelect = () => {
     setTool({...tool, type: 'select', cursor: null, onClick: null, onMouseMove: null});
-    if (canvas) {
-      canvas.isDrawingMode = false;
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
       canvas.selection = true;
     }
   }
 
   const setPencil = () => {
     setTool({...tool, type: 'pencil', cursor: null, onClick: null, onMouseMove: null});
-    if (canvas) {
-      canvas.isDrawingMode = true;
+    if (canvasRef.current) {
     }
   }
 
   const setEraser = () => {
     setTool({...tool, type: 'eraser', cursor: null, onClick: null, onMouseMove: erase});
-    if (canvas) {
-      canvas.isDrawingMode = false;
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
       canvas.selection = false;
     }
   }
 
   const undo = () => {
-    if (canvas) {
-      canvas.undo();
+    if (canvasRef.current) {
+      canvasRef.current.undo();
     }
   }
 
@@ -224,6 +265,8 @@ function App() {
       }
 
       const image: fabric.Image = await new Promise(resolve => cachedImage.clone(resolve));
+
+      const canvas = canvasRef.current;
       const pointer = canvas!.getPointer(evt.e);
       image.left = pointer.x;
       image.top = pointer.y;
@@ -237,9 +280,9 @@ function App() {
 
   // TODO consider useLayoutEffect
   useEffect(() => {
-    if (!canvas) {
+    if (!canvasRef.current) {
       const canvas = initializeCanvas();
-      setCanvas(canvas);
+      canvasRef.current = canvas;
 
       fabric.Image.fromURL(maps[map], (image) => {
         image.canvas = canvas;
@@ -250,12 +293,29 @@ function App() {
         canvas!.clearHistory();
       });
 
-      canvas.on('mouse:down', (opt) => {
-        setTool({...toolRef.current, active: true});
+      canvas.on('mouse:down', (opt: IEvent) => {
+        const newTool = {...toolRef.current, active: true};
+        const e = opt.e as MouseEvent;
+        if (e.altKey && !toolRef.current.active) {
+          newTool.type = 'pan';
+          newTool.onMouseMove = pan;
+          canvas.selection = false;
+          lastPosRef.current = { x: e.clientX, y: e.clientY };
+          prevTool.current = {...toolRef.current};
+        }
+        setTool(newTool);
       });
 
       canvas.on('mouse:up', (opt) => {
-        setTool({...toolRef.current, active: false});
+        let tool = {...toolRef.current};
+
+        // Tools like Pan are under a modifier. Once you let go off the
+        // modifier they should return to the previous tool.
+        if (modifierTools.includes(toolRef.current.type)) {
+          tool = {...prevTool.current};
+        }
+
+        setTool({...tool, active: false});
       });
 
       canvas.on('mouse:wheel', function(opt) {
@@ -276,9 +336,9 @@ function App() {
       if (containerRef.current) {
         const width = containerRef.current.offsetWidth;
         const height = containerRef.current.offsetHeight;
-        canvas?.setDimensions({ width, height });
+        canvasRef.current?.setDimensions({ width, height });
       } else {
-        canvas?.setDimensions(defaultSize);
+        canvasRef.current?.setDimensions(defaultSize);
       }
     }
 
@@ -286,7 +346,7 @@ function App() {
 
     function undoListener({ key, ctrlKey }: KeyboardEvent) {
       if(ctrlKey && key === "z") {
-        if (canvas) canvas.undo();
+        if (canvasRef.current) canvasRef.current.undo();
       }
     }
 
@@ -295,7 +355,7 @@ function App() {
     return () => {
       window.removeEventListener("resize", resizeListener);
     }
-  }, [containerRef, canvas, setTool, map]);
+  }, [containerRef, setTool, map, pan]);
 
   return (
     <div className="App">
@@ -327,7 +387,12 @@ function App() {
           </SidebarSection>
         </section>
       </aside>
-      <div className="Canvas" ref={containerRef}>
+      <div
+		  className="Canvas"
+		  ref={containerRef}
+		  onKeyDown={disableDrawing}
+		  onKeyUp={enableDrawing} 
+		  tabIndex={0}>
         <canvas id="canvas">
         </canvas>
       </div>
