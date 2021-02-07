@@ -16,7 +16,7 @@ ReactGA.pageview(window.location.pathname + window.location.search);
 
 ReactDOM.render(
   <React.StrictMode>
-    <Router>
+    <Router basename="/tarkov-debrief">
       <Switch>
         <Route path="/app/:map">
           <App />
