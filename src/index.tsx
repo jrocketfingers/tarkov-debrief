@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import ReactGA from 'react-ga';
 import './index.css';
 import App from './App';
 import MapSelector from './MapSelector';
@@ -9,6 +10,9 @@ import {
   Switch,
   Route,
 } from "react-router-dom";
+
+ReactGA.initialize('UA-189112106-1');
+ReactGA.pageview(window.location.pathname + window.location.search);
 
 ReactDOM.render(
   <React.StrictMode>
