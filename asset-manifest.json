@@ -1,8 +1,8 @@
 {
   "files": {
     "main.css": "/tarkov-debrief/static/css/main.0de23e2d.chunk.css",
-    "main.js": "/tarkov-debrief/static/js/main.de896839.chunk.js",
-    "main.js.map": "/tarkov-debrief/static/js/main.de896839.chunk.js.map",
+    "main.js": "/tarkov-debrief/static/js/main.fc8f5d8d.chunk.js",
+    "main.js.map": "/tarkov-debrief/static/js/main.fc8f5d8d.chunk.js.map",
     "runtime-main.js": "/tarkov-debrief/static/js/runtime-main.ba84c7af.js",
     "runtime-main.js.map": "/tarkov-debrief/static/js/runtime-main.ba84c7af.js.map",
     "static/js/2.7d3e17d5.chunk.js": "/tarkov-debrief/static/js/2.7d3e17d5.chunk.js",
@@ -42,6 +42,6 @@
     "static/js/runtime-main.ba84c7af.js",
     "static/js/2.7d3e17d5.chunk.js",
     "static/css/main.0de23e2d.chunk.css",
-    "static/js/main.de896839.chunk.js"
+    "static/js/main.fc8f5d8d.chunk.js"
   ]
 }
