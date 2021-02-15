@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useMemo, useState, KeyboardEvent } from "react";
 import { fabric } from "fabric";
 import { ColorResult, TwitterPicker } from "react-color";
 import "fabric-history";
@@ -27,11 +27,17 @@ const defaultSize: Size = { width: 300, height: 300 };
 let backgroundImage: fabric.Image;
 let unerasable = new Set<string>();
 
+enum ToolType {
+  select = "select",
+  pencil = "pencil",
+  eraser = "eraser",
+  marker = "marker",
+  pan = "pan",
+}
+
 type Tool = {
   active: boolean;
-  type: "select" | "pencil" | "eraser" | "marker" | "pan";
-  onClick: null | ((evt: IEvent) => void);
-  onMouseMove: null | ((evt: IEvent) => void);
+  type: ToolType;
   cursor: null | string;
 };
 
@@ -44,7 +50,6 @@ function startDownload(url: string, name: string): void {
   document.body.removeChild(link);
 }
 
-const modifierTools = ["pan"];
 const brushWidth = 5;
 const markerCache: Record<string, fabric.Image> = {};
 const PENCIL_COLOR: string = "#f00";
@@ -88,26 +93,15 @@ function App() {
   const { map } = useParams<Params>();
   const containerRef = useRef<HTMLDivElement>(null);
   const altKeyRef = useRef<boolean>(false);
-  const [tool, _setTool] = useState<Tool>({
-    type: "pencil",
-    active: true,
-    onClick: null,
-    onMouseMove: null,
-    cursor: null,
-  });
-  const toolRef = useRef<Tool>({
-    type: "pencil",
-    active: true,
-    onClick: null,
-    onMouseMove: null,
+  const [tool, setTool] = useState<Tool>({
+    type: ToolType.pencil,
+    active: false,
     cursor: null,
   });
 
-  const prevTool = useRef<Tool>({
-    type: "pencil",
-    active: true,
-    onClick: null,
-    onMouseMove: null,
+  const [prevTool, setPrevTool] = useState<Tool>({
+    type: ToolType.pencil,
+    active: false,
     cursor: null,
   });
 
@@ -118,16 +112,41 @@ function App() {
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const [sidebar, setSidebar] = useState<boolean>(false);
 
-  const erase = useCallback((opt: IEvent) => {
-    if (opt.target !== undefined && toolRef.current.active) {
-      if (
-        opt.target instanceof fabric.Image &&
-        unerasable.has(opt.target.getSrc())
-      )
+  const appKeyDownHandler = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.ctrlKey && event.key === "z") {
+        if (canvasRef.current) canvasRef.current.undo();
         return;
-      canvasRef.current!.remove(opt.target!);
+      }
+
+      if (event.key === "Alt") {
+        setPrevTool(tool);
+        setTool({ ...tool, type: ToolType.pan });
+      }
     }
-  }, []);
+  , [setTool, tool]);
+
+  const appKeyUpHandler = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Alt") {
+        setTool(prevTool);
+      }
+    }
+  , [setTool, prevTool]);
+
+  const erase = useCallback(
+    (opt: IEvent) => {
+      if (opt.target !== undefined && tool.active) {
+        if (
+          opt.target instanceof fabric.Image &&
+          unerasable.has(opt.target.getSrc())
+        )
+          return;
+        canvasRef.current!.remove(opt.target!);
+      }
+    },
+    [tool.active]
+  );
 
   const pan = useCallback(function (opt) {
     const canvas = canvasRef.current;
@@ -156,134 +175,13 @@ function App() {
       const canvas = canvasRef.current;
       if (opt.key === "Alt") {
         altKeyRef.current = false;
-        if (canvas && tool.type === "pencil") {
+        if (canvas && tool.type === ToolType.pencil) {
           canvas!.isDrawingMode = true;
         }
       }
     },
     [tool]
   );
-
-  /**
-   * Sets the current tool and resets canvas listeners.
-   *
-   * @param value: Tool
-   */
-  const setTool = useCallback((value: Tool) => {
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-      // switch listeners (tool is old state, value is new)
-      if (toolRef.current.onClick)
-        canvas.off("mouse:up", toolRef.current.onClick);
-      if (toolRef.current.onMouseMove)
-        canvas.off("mouse:move", toolRef.current.onMouseMove);
-
-      if (value.onClick) canvas.on("mouse:up", value.onClick);
-      if (value.onMouseMove) canvas.on("mouse:move", value.onMouseMove);
-
-      // set the cursor according to the tool
-      if (value.cursor === null) {
-        canvas.defaultCursor = "auto";
-        canvas.hoverCursor = "auto";
-      } else {
-        canvas.defaultCursor = value.cursor;
-        canvas.hoverCursor = canvas.defaultCursor;
-      }
-
-      if (value.type === "pencil" && altKeyRef.current === false) {
-        canvas.isDrawingMode = true;
-      } else {
-        canvas.isDrawingMode = false;
-      }
-    }
-    setSidebar(false);
-
-    _setTool(value);
-    toolRef.current = value;
-  }, []);
-
-  const setMarker = (value: string) => {
-    _setMarker(value);
-    markerRef.current = value;
-  };
-
-  const changeColor = (color: ColorResult) => {
-    setColor(color.hex);
-    if (canvasRef.current) {
-      canvasRef.current.freeDrawingBrush.color = color.hex;
-    }
-  };
-
-  const save = () => {
-    if (canvasRef.current) {
-      const url = canvasRef.current.toDataURL({ multiplier: 3 });
-      startDownload(url, "startegy.png");
-    }
-  };
-
-  const setSelect = () => {
-    setTool({
-      ...tool,
-      type: "select",
-      cursor: null,
-      onClick: null,
-      onMouseMove: null,
-    });
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-      canvas.selection = true;
-    }
-  };
-
-  const setPencil = () => {
-    setTool({
-      ...tool,
-      type: "pencil",
-      cursor: null,
-      onClick: null,
-      onMouseMove: null,
-    });
-    if (canvasRef.current) {
-    }
-  };
-
-  const setEraser = () => {
-    setTool({
-      ...tool,
-      type: "eraser",
-      cursor: null,
-      onClick: null,
-      onMouseMove: erase,
-    });
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-      canvas.selection = false;
-    }
-  };
-
-  const undo = () => {
-    if (canvasRef.current) {
-      canvasRef.current.undo();
-    }
-  };
-
-  const showSidebar = () => {
-    setSidebar(true);
-  };
-
-  const hideSidebar = () => {
-    setSidebar(false);
-  };
-
-  const selectMarker = (
-    evt: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    const target = evt.target as HTMLImageElement;
-    setMarker(target.src);
-
-    const cursor = `url(${target.src}), auto`;
-    setTool({ ...tool, type: "marker", onClick: placeMarker, cursor });
-  };
 
   const placeMarker = async (evt: IEvent) => {
     if (markerRef && markerRef.current) {
@@ -312,6 +210,117 @@ function App() {
     }
   };
 
+  const handlers: Record<ToolType, Record<string, (event: IEvent) => void>> = useMemo(() => ({
+    [ToolType.select]: {},
+    [ToolType.pencil]: {},
+    [ToolType.eraser]: {
+      "mouse:move": erase,
+    },
+    [ToolType.marker]: {
+      "mouse:down": placeMarker,
+    },
+    [ToolType.pan]: {
+      "mouse:move": pan,
+    },
+  }), [erase, pan]);
+
+  // sets the canvas cursor
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.defaultCursor = tool?.cursor || "auto";
+      canvas.hoverCursor = tool?.cursor || "auto";
+    }
+  }, [tool.cursor]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      if (tool.type === ToolType.pencil) {
+        canvas.isDrawingMode = true;
+      } else {
+        canvas.isDrawingMode = false;
+      }
+
+      if (tool.type === ToolType.eraser) {
+        canvas.selection = false;
+      }
+
+      if (tool.type === ToolType.select) {
+        canvas.selection = true;
+      }
+    }
+  }, [tool.type])
+
+  const setMarker = (value: string) => {
+    _setMarker(value);
+    markerRef.current = value;
+  };
+
+  const changeColor = (color: ColorResult) => {
+    setColor(color.hex);
+    if (canvasRef.current) {
+      canvasRef.current.freeDrawingBrush.color = color.hex;
+    }
+  };
+
+  const save = () => {
+    if (canvasRef.current) {
+      const url = canvasRef.current.toDataURL({ multiplier: 3 });
+      startDownload(url, "startegy.png");
+    }
+  };
+
+  const setSelect = () => {
+    setTool({
+      ...tool,
+      type: ToolType.select,
+      cursor: null,
+    });
+  };
+
+  const setPencil = () => {
+    setTool({
+      ...tool,
+      type: ToolType.pencil,
+      cursor: null,
+    });
+    if (canvasRef.current) {
+    }
+  };
+
+  const setEraser = () => {
+    setTool({
+      ...tool,
+      type: ToolType.eraser,
+      cursor: null,
+    });
+  };
+
+  const undo = () => {
+    if (canvasRef.current) {
+      canvasRef.current.undo();
+    }
+  };
+
+  const showSidebar = () => {
+    setSidebar(true);
+  };
+
+  const hideSidebar = () => {
+    setSidebar(false);
+  };
+
+  const selectMarker = (
+    evt: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ) => {
+    const target = evt.target as HTMLImageElement;
+    setMarker(target.src);
+
+    const cursor = `url(${target.src}), auto`;
+    setTool({ ...tool, type: ToolType.marker, cursor });
+  };
+
   // TODO consider useLayoutEffect
   useEffect(() => {
     if (!canvasRef.current) {
@@ -328,30 +337,21 @@ function App() {
       });
 
       canvas.on("mouse:down", (opt: IEvent) => {
-        const newTool = { ...toolRef.current, active: true };
         const e = opt.e as MouseEvent;
-        if (e.altKey && !toolRef.current.active) {
-          newTool.type = "pan";
-          newTool.onMouseMove = pan;
-          canvas.selection = false;
+        if (e.altKey && !tool.active) {
           lastPosRef.current = { x: e.clientX, y: e.clientY };
-          prevTool.current = { ...toolRef.current };
+          return;
+        } else {
+          handlers?.[tool.type]?.["mouse:down"]?.(opt);
         }
-        setTool(newTool);
       });
 
+      /* return to the previous tool */
       canvas.on("mouse:up", (opt) => {
-        let tool = { ...toolRef.current };
-
-        // Tools like Pan are under a modifier. Once you let go off the
-        // modifier they should return to the previous tool.
-        if (modifierTools.includes(toolRef.current.type)) {
-          tool = { ...prevTool.current };
-        }
-
         setTool({ ...tool, active: false });
       });
 
+      /* zoom */
       canvas.on("mouse:wheel", function (opt) {
         const event = opt.e as WheelEvent;
         const delta = event.deltaY;
@@ -381,21 +381,14 @@ function App() {
 
     resizeListener();
 
-    function undoListener({ key, ctrlKey }: KeyboardEvent) {
-      if (ctrlKey && key === "z") {
-        if (canvasRef.current) canvasRef.current.undo();
-      }
-    }
-
     window.addEventListener("resize", resizeListener);
-    document.addEventListener("keyup", undoListener);
     return () => {
       window.removeEventListener("resize", resizeListener);
     };
-  }, [containerRef, setTool, map, pan]);
+  }, [handlers, tool, pan, map]);
 
   return (
-    <div className="App">
+    <div className="App" onKeyDown={appKeyDownHandler} onKeyUp={appKeyUpHandler}>
       <header className="App-header">
         <Link className="App-header-title" to="/">
           Tarkov Debrief
