@@ -8,6 +8,7 @@ import "./Sidebar.css";
 
 import { maps } from "./MapSelector";
 
+import githubLogo from "./icons/github.png";
 import selectIcon from "./icons/select.svg";
 import pencilIcon from "./icons/pencil.svg";
 import eraserIcon from "./icons/eraser.svg";
@@ -27,6 +28,8 @@ import { usePencil } from "./tools/pencil";
 import { useEraser } from "./tools/eraser";
 import { useStamp } from "./tools/stamp";
 import { useZoom } from "./tools/zoom";
+
+const githubUrl = "https://github.com/jrocketfingers/tarkov-debrief";
 
 type Size = { width: number; height: number };
 
@@ -183,9 +186,15 @@ function App() {
   return (
     <div className="App" ref={appRef}>
       <header className="App-header">
-        <Link className="App-header-title" to="/">
-          Tarkov Debrief
-        </Link>
+        <section className="App-header-left">
+          <Link className="App-header-title" to="/">
+            Tarkov Debrief
+          </Link>
+          <a href={githubUrl}>
+            <img src={githubLogo} alt="github logo" className="App-header-github-logo"/>
+          </a>
+          <a href={githubUrl} className="App-header-github">Read more on github</a>
+        </section>
         <section className="App-header-buttons">
           <button onClick={setSelect}>
             <img src={selectIcon} alt="select" />
