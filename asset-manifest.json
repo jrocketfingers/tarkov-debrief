@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/tarkov-debrief/static/css/main.0de23e2d.chunk.css",
-    "main.js": "/tarkov-debrief/static/js/main.926661b0.chunk.js",
-    "main.js.map": "/tarkov-debrief/static/js/main.926661b0.chunk.js.map",
+    "main.css": "/tarkov-debrief/static/css/main.75bf001a.chunk.css",
+    "main.js": "/tarkov-debrief/static/js/main.6b3feaa2.chunk.js",
+    "main.js.map": "/tarkov-debrief/static/js/main.6b3feaa2.chunk.js.map",
     "runtime-main.js": "/tarkov-debrief/static/js/runtime-main.707b6bdc.js",
     "runtime-main.js.map": "/tarkov-debrief/static/js/runtime-main.707b6bdc.js.map",
     "static/js/2.d799dca2.chunk.js": "/tarkov-debrief/static/js/2.d799dca2.chunk.js",
@@ -10,7 +10,7 @@
     "static/js/3.6d5180c6.chunk.js": "/tarkov-debrief/static/js/3.6d5180c6.chunk.js",
     "static/js/3.6d5180c6.chunk.js.map": "/tarkov-debrief/static/js/3.6d5180c6.chunk.js.map",
     "index.html": "/tarkov-debrief/index.html",
-    "static/css/main.0de23e2d.chunk.css.map": "/tarkov-debrief/static/css/main.0de23e2d.chunk.css.map",
+    "static/css/main.75bf001a.chunk.css.map": "/tarkov-debrief/static/css/main.75bf001a.chunk.css.map",
     "static/js/2.d799dca2.chunk.js.LICENSE.txt": "/tarkov-debrief/static/js/2.d799dca2.chunk.js.LICENSE.txt",
     "static/media/index.css": "/tarkov-debrief/static/media/bender.7f45b794.woff",
     "static/media/customs-thumbnail.b02c6216.png": "/tarkov-debrief/static/media/customs-thumbnail.b02c6216.png",
@@ -41,7 +41,7 @@
   "entrypoints": [
     "static/js/runtime-main.707b6bdc.js",
     "static/js/2.d799dca2.chunk.js",
-    "static/css/main.0de23e2d.chunk.css",
-    "static/js/main.926661b0.chunk.js"
+    "static/css/main.75bf001a.chunk.css",
+    "static/js/main.6b3feaa2.chunk.js"
   ]
 }
