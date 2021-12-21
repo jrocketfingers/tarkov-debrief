@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 
 import "./MapSelector.css";
@@ -9,6 +8,7 @@ import woods from "./maps/woods.png";
 import labs from "./maps/labs.jpg";
 import reserve from "./maps/reserve.png";
 import shoreline from "./maps/shoreline.png";
+import lighthouse from "./maps/lighthouse.png";
 import factory from "./maps/factory.jpg";
 
 import customsThumbnail from "./maps/customs-thumbnail.png";
@@ -17,9 +17,10 @@ import woodsThumbnail from "./maps/woods-thumbnail.png";
 import labsThumbnail from "./maps/labs-thumbnail.png";
 import reserveThumbnail from "./maps/reserve-thumbnail.png";
 import shorelineThumbnail from "./maps/shoreline-thumbnail.png";
+import lighthouseThumbnail from "./maps/lighthouse-thumbnail.png";
 import factoryThumbnail from "./maps/factory-thumbnail.png";
 
-export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory};
+export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse};
 export const thumbnails: Record<string, string> = {
   customs: customsThumbnail,
   interchange: interchangeThumbnail,
@@ -28,6 +29,7 @@ export const thumbnails: Record<string, string> = {
   reserve: reserveThumbnail,
   shoreline: shorelineThumbnail,
   factory: factoryThumbnail,
+  lighthouse: lighthouseThumbnail,
 };
 
 function MapSelector() {
