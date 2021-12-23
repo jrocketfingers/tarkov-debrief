@@ -22,8 +22,9 @@ export const onUse = (opt: IEvent) => {
     if (
       opt.target instanceof fabric.Image &&
       unerasable.has(opt.target.getSrc())
-    )
+    ) {
       return;
+    }
     maybeCanvas?.remove(opt.target!);
   }
 }

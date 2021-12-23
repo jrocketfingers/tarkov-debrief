@@ -1,5 +1,5 @@
 import { IEvent } from "fabric/fabric-impl";
-import { RefObject, useEffect } from "react";
+import { useEffect } from "react";
 import { SetToolFn, Tool, ToolType } from "./tool";
 
 let maybeCanvas: fabric.Canvas | null;
@@ -23,7 +23,8 @@ export const onDrag = (opt: IEvent) => {
 
 export const onStartDrag = (opt: IEvent) => {
   const e = opt.e as MouseEvent;
-  if (e.altKey) {
+  if (e.button === 1) { // middle click
+    e.preventDefault();
     prevTool = tool;
     setTool({
       ...tool,
@@ -46,7 +47,7 @@ export const onStopDrag = (opt: IEvent) => {
   }
 }
 
-export const usePan = (canvasInstance: fabric.Canvas | null, containerRef: RefObject<HTMLDivElement>, setToolOuter: SetToolFn, toolOuter: Tool) => {
+export const usePan = (canvasInstance: fabric.Canvas | null, setToolOuter: SetToolFn, toolOuter: Tool) => {
   maybeCanvas = canvasInstance;
   setTool = setToolOuter;
   tool = toolOuter;

@@ -27,7 +27,7 @@ export const useSelect = (canvasInstance: fabric.Canvas | null, setToolOuter: Se
         if(canvas) canvas.selection = false;
       };
     }
-  }, [tool, setToolOuter, canvasInstance]);
+  }, [setToolOuter, canvasInstance]);
 
   return { onChoice };
 };

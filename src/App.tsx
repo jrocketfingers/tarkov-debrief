@@ -28,6 +28,7 @@ import { usePencil } from "./tools/pencil";
 import { useEraser } from "./tools/eraser";
 import { useStamp } from "./tools/stamp";
 import { useZoom } from "./tools/zoom";
+import { usePan } from "./tools/pan";
 
 const githubUrl = "https://github.com/jrocketfingers/tarkov-debrief";
 
@@ -56,6 +57,8 @@ function initializeCanvas() {
     isDrawingMode: true,
     perPixelTargetFind: true,
     selection: false,
+    fireMiddleClick: true,
+    fireRightClick: true,
   });
 
   canvas.freeDrawingBrush.color = PENCIL_COLOR;
@@ -131,6 +134,8 @@ function App() {
     tool,
     setTool
   );
+
+  usePan(maybeCanvas, setTool, tool);
 
   // FIXME: untie zoom tool from brush
   useZoom(maybeCanvas, brushWidth);
