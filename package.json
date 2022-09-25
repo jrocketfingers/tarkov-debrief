@@ -4,7 +4,7 @@
   "homepage": "https://jrocketfingers.github.io/tarkov-debrief",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/jest-dom": "5.16.5",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
     "@types/fabric": "^4.2.1",
