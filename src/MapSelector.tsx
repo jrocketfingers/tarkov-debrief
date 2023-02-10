@@ -10,6 +10,7 @@ import reserve from "./maps/reserve.png";
 import shoreline from "./maps/shoreline.png";
 import lighthouse from "./maps/lighthouse.png";
 import factory from "./maps/factory.jpg";
+import streets from "./maps/streets.png";
 
 import customsThumbnail from "./maps/customs-thumbnail.png";
 import interchangeThumbnail from "./maps/interchange-thumbnail.png";
@@ -19,8 +20,9 @@ import reserveThumbnail from "./maps/reserve-thumbnail.png";
 import shorelineThumbnail from "./maps/shoreline-thumbnail.png";
 import lighthouseThumbnail from "./maps/lighthouse-thumbnail.png";
 import factoryThumbnail from "./maps/factory-thumbnail.png";
+import streetsThumbnail from "./maps/streets-thumbnail.png";
 
-export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse};
+export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse, streets};
 export const thumbnails: Record<string, string> = {
   customs: customsThumbnail,
   interchange: interchangeThumbnail,
@@ -30,6 +32,7 @@ export const thumbnails: Record<string, string> = {
   shoreline: shorelineThumbnail,
   factory: factoryThumbnail,
   lighthouse: lighthouseThumbnail,
+  streets: streetsThumbnail,
 };
 
 function MapSelector() {
