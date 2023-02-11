@@ -1,51 +1,50 @@
-import { fabric } from "fabric";
-import { useEffect } from "react";
+import * as paper from "paper";
 import { ColorResult } from "react-color";
-import { Tool, ToolType, SetToolFn } from "./tool";
 
-let maybeCanvas: fabric.Canvas | null;
-let tool: Tool;
-let setTool: SetToolFn;
-let setColor: (color: string) => void;
 
-export const onChoice = () => {
-  setTool({
-    ...tool,
-    type: ToolType.pencil,
-    cursor: null,
-  });
-};
+export const usePencil = () => {
+    let path: paper.Path;
+    let color = new paper.Color('red');
+    const tool = new paper.Tool();
+    tool.minDistance = 2;
 
-const onColorChoice = (color: ColorResult) => {
-  if (!maybeCanvas) return;
-  const canvas = maybeCanvas!;
+    tool.onMouseDown = function (event: paper.ToolEvent) {
+        if((event as any).event.button !== 0) return;
 
-  setColor(color.hex);
-  if (canvas) {
-    canvas.freeDrawingBrush.color = color.hex;
-  }
-};
+        path = new paper.Path();
+        path.add(event.point);
+        path.strokeColor = color;
+        path.strokeWidth = 3;
+    };
 
-export const usePencil = (
-  canvas: fabric.Canvas | null,
-  setToolOuter: SetToolFn,
-  toolOuter: Tool,
-  setColorOuter: (color: string) => void
-) => {
-  maybeCanvas = canvas;
-  setTool = setToolOuter;
-  tool = toolOuter;
-  setColor = setColorOuter;
+    tool.onMouseDrag = function (event: paper.ToolEvent) {
+        if((event as any).event.button !== 0) return;
 
-  useEffect(() => {
-    if (toolOuter.type === ToolType.pencil && maybeCanvas) {
-      maybeCanvas.isDrawingMode = true;
-
-      return () => {
-        if (maybeCanvas) maybeCanvas.isDrawingMode = false;
-      };
+        path.add(event.point);
     }
-  }, [toolOuter, canvas]);
 
-  return { onChoice, onColorChoice };
+    const stopWriting = () => {
+        path.smooth({ type: 'continuous' });
+        path.simplify();
+    }
+
+    tool.onMouseUp = function (event: paper.ToolEvent) {
+        if((event as any).event.button !== 0) return;
+
+        stopWriting();
+    };
+
+    (tool as any).onDeactivate = function() {
+        stopWriting();
+    }
+
+    const onChoice = () => {
+        tool.activate();
+    };
+
+    const onColorChoice = (colorSelection: ColorResult) => {
+    color = new paper.Color(colorSelection.hex);
+    };
+
+    return { onChoice, onColorChoice };
 };

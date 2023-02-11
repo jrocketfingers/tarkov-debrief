@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { fabric } from "fabric";
+import * as paper from "paper";
 import { TwitterPicker } from "react-color";
 import { Link, useParams } from "react-router-dom";
-import "fabric-history";
 import "./App.css";
 import "./Sidebar.css";
 
@@ -16,7 +15,7 @@ import undoIcon from "./icons/undo.svg";
 import addMarkerIcon from "./icons/marker.svg";
 import saveIcon from "./icons/save.svg";
 
-import { useUndo } from "./tools/undo";
+// import { useUndo } from "./tools/undo";
 
 import thickPMCMarker from "./icons/pmc-thick.svg";
 import mediumPMCMarker from "./icons/pmc-med.svg";
@@ -25,17 +24,13 @@ import scavMarker from "./icons/scav.svg";
 import { Tool, ToolType } from "./tools/tool";
 import { useSelect } from "./tools/select";
 import { usePencil } from "./tools/pencil";
-import { useEraser } from "./tools/eraser";
-import { useStamp } from "./tools/stamp";
-import { useZoom } from "./tools/zoom";
+// import { useEraser } from "./tools/eraser";
+// import { useStamp } from "./tools/stamp";
+// import { useZoom } from "./tools/zoom";
 import { usePan } from "./tools/pan";
 
 const githubUrl = "https://github.com/jrocketfingers/tarkov-debrief";
 
-type Size = { width: number; height: number };
-
-const defaultSize: Size = { width: 300, height: 300 };
-let backgroundImage: fabric.Image;
 let unerasable = new Set<string>();
 
 function startDownload(url: string, name: string): void {
@@ -49,25 +44,6 @@ function startDownload(url: string, name: string): void {
 
 const brushWidth = 5;
 const PENCIL_COLOR: string = "#f00";
-
-function initializeCanvas() {
-  const canvas = new fabric.Canvas("canvas", {
-    height: defaultSize.height,
-    width: defaultSize.width,
-    isDrawingMode: true,
-    perPixelTargetFind: true,
-    selection: false,
-    fireMiddleClick: true,
-    fireRightClick: true,
-  });
-
-  canvas.freeDrawingBrush.color = PENCIL_COLOR;
-  canvas.freeDrawingBrush.width = brushWidth;
-
-  canvas.setCursor(`url(${pencilIcon})`);
-
-  return canvas;
-}
 
 interface SidebarSectionProps {
   title: string;
@@ -100,45 +76,39 @@ function App() {
   console.log("rerender");
 
   const [color, setColor] = useState<string>(PENCIL_COLOR);
-  const [maybeCanvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [sidebar, setSidebar] = useState<boolean>(false);
 
   const save = () => {
-    if (maybeCanvas) {
-      const url = maybeCanvas.toDataURL({ multiplier: 3 });
-      startDownload(url, "startegy.png");
+    if (paper?.project) {
+      const url = paper.project.view.element.toDataURL();
+	  startDownload(url, "startegy.png");
     }
   };
 
-  const { onChoice: setSelect } = useSelect(maybeCanvas, setTool, tool);
+  const { onChoice: setSelect } = useSelect();
 
-  const { onChoice: setPencil, onColorChoice } = usePencil(
-    maybeCanvas,
-    setTool,
-    tool,
-    setColor
-  );
+  const { onChoice: setPencil, onColorChoice } = usePencil();
 
-  const { onChoice: setEraser } = useEraser(
-    maybeCanvas,
-    setTool,
-    tool,
-    unerasable
-  );
+  // const { onChoice: setEraser } = useEraser(
+  //   paper,
+  //   setTool,
+  //   tool,
+  //   unerasable
+  // );
 
-  const { onUse: undo } = useUndo(maybeCanvas, appRef);
+  // const { onUse: undo } = useUndo(paper, appRef);
 
-  const { onChoice: selectMarker } = useStamp(
-    maybeCanvas,
-    setSidebar,
-    tool,
-    setTool
-  );
+  // const { onChoice: selectMarker } = useStamp(
+  //   paper,
+  //   setSidebar,
+  //   tool,
+  //   setTool
+  // );
 
-  usePan(maybeCanvas, setTool, tool);
+  //usePan(paper, setTool, tool);
 
-  // FIXME: untie zoom tool from brush
-  useZoom(maybeCanvas, brushWidth);
+  // // FIXME: untie zoom tool from brush
+  // useZoom(paper, brushWidth);
 
   const showSidebar = () => {
     setSidebar(true);
@@ -150,43 +120,34 @@ function App() {
 
   // Run-once
   useEffect(() => {
-    setCanvas(initializeCanvas());
+    paper.setup("canvas");
+
+    let panPoint;
+    paper.view.onMouseDown = function(event: any) {
+        if (event.event.button === 1) {
+            panPoint = event.point;
+        }
+    };
+
+    //paper.tool.cursor = `url(${pencilIcon})`;
+
+    new paper.Layer();
   }, []);
 
   // Load map and ensure it's fullscreen
   useEffect(() => {
-    let image: fabric.Image;
+    if (!paper.project) return;
 
-    if (!maybeCanvas) return;
-    const canvas = maybeCanvas!;
-
-    fabric.Image.fromURL(maps[map], (imageInstance) => {
-      image = imageInstance;
-      image.canvas = canvas;
-      image.selectable = false;
-      backgroundImage = image;
-      unerasable.add(backgroundImage.getSrc());
-      canvas.add(image);
-      canvas.clearHistory();
-    });
-
-    function resizeListener() {
-      if (containerRef.current) {
-        const width = containerRef.current.offsetWidth;
-        const height = containerRef.current.offsetHeight;
-        maybeCanvas?.setDimensions({ width, height });
-      } else {
-        maybeCanvas?.setDimensions(defaultSize);
+    const image = new paper.Raster({
+      source: maps[map],
+      onLoad: function() {
+        //this.position = paper.view.center;
       }
-    }
+    })
 
-    resizeListener();
+    paper.project.layers[0].addChild(image);
 
-    window.addEventListener("resize", resizeListener);
-    return () => {
-      window.removeEventListener("resize", resizeListener);
-    };
-  }, [map, maybeCanvas]);
+  }, [map]);
 
   return (
     <div className="App" ref={appRef}>
@@ -207,12 +168,12 @@ function App() {
           <button onClick={setPencil}>
             <img src={pencilIcon} alt="pencil" />
           </button>
-          <button onClick={setEraser}>
+          {/* <button onClick={setEraser}>
             <img src={eraserIcon} alt="eraser" />
           </button>
           <button onClick={undo}>
             <img src={undoIcon} alt="undo" />
-          </button>
+          </button> */}
           <button onClick={showSidebar}>
             <img src={addMarkerIcon} alt="undo" />
           </button>
@@ -229,7 +190,7 @@ function App() {
         <section onClick={hideSidebar} id="closeArea"></section>
         <section id="sidebar">
           <SidebarSection title="Markers">
-            <button onClick={selectMarker}>
+            {/* <button onClick={selectMarker}>
               <img src={thickPMCMarker} alt="thick PMC" />
             </button>
             <button onClick={selectMarker}>
@@ -240,7 +201,7 @@ function App() {
             </button>
             <button onClick={selectMarker}>
               <img src={scavMarker} alt="light PMC" />
-            </button>
+            </button> */}
           </SidebarSection>
           <SidebarSection title="">
             <TwitterPicker
