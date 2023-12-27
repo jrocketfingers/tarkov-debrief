@@ -24,7 +24,7 @@ import factoryThumbnail from "./maps/factory-thumbnail.png";
 import streetsThumbnail from "./maps/streets-thumbnail.png";
 import groundZeroThumbnail from "./maps/ground-zero.webp";
 
-export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse, streets};
+export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse, streets, groundZero};
 export const thumbnails: Record<string, string> = {
   customs: customsThumbnail,
   interchange: interchangeThumbnail,
@@ -47,7 +47,7 @@ function MapSelector() {
       <section className="MapList">
         {Object.entries(maps).map(([key, value]) =>
           <Link key={key} className="MapList-Card" to={`/app/${key}`}>
-            <img src={thumbnails[key]} alt="key"/>
+            <img width={380} src={thumbnails[key]} alt="key"/>
             <p>{key}</p>
           </Link>
         )}
