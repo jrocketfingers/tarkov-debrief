@@ -11,6 +11,7 @@ import shoreline from "./maps/shoreline.png";
 import lighthouse from "./maps/lighthouse.png";
 import factory from "./maps/factory.jpg";
 import streets from "./maps/streets.png";
+import groundZero from "./maps/ground-zero.webp";
 
 import customsThumbnail from "./maps/customs-thumbnail.png";
 import interchangeThumbnail from "./maps/interchange-thumbnail.png";
@@ -21,6 +22,7 @@ import shorelineThumbnail from "./maps/shoreline-thumbnail.png";
 import lighthouseThumbnail from "./maps/lighthouse-thumbnail.png";
 import factoryThumbnail from "./maps/factory-thumbnail.png";
 import streetsThumbnail from "./maps/streets-thumbnail.png";
+import groundZeroThumbnail from "./maps/ground-zero.webp";
 
 export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse, streets};
 export const thumbnails: Record<string, string> = {
@@ -33,6 +35,7 @@ export const thumbnails: Record<string, string> = {
   factory: factoryThumbnail,
   lighthouse: lighthouseThumbnail,
   streets: streetsThumbnail,
+  groundZero: groundZeroThumbnail,
 };
 
 function MapSelector() {
@@ -42,7 +45,7 @@ function MapSelector() {
         <Link className="App-header-title" to="/">Tarkov Debrief</Link>
       </header>
       <section className="MapList">
-        {Object.entries(maps).map(([key, value]) => 
+        {Object.entries(maps).map(([key, value]) =>
           <Link key={key} className="MapList-Card" to={`/app/${key}`}>
             <img src={thumbnails[key]} alt="key"/>
             <p>{key}</p>
