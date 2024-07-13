@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/tarkov-debrief/static/css/main.cd742b7e.css",
-    "main.js": "/tarkov-debrief/static/js/main.13ed4de2.js",
+    "main.js": "/tarkov-debrief/static/js/main.3c9b81cc.js",
     "static/js/422.6cba3e15.chunk.js": "/tarkov-debrief/static/js/422.6cba3e15.chunk.js",
     "static/media/reserve.png": "/tarkov-debrief/static/media/reserve.074ec021208d4b997983.png",
     "static/media/woods.png": "/tarkov-debrief/static/media/woods.1db93aa79a536be78faf.png",
@@ -36,11 +36,11 @@
     "static/media/select.svg": "/tarkov-debrief/static/media/select.a36d8019fbc5c872c4d280d3e65a7123.svg",
     "static/media/marker.svg": "/tarkov-debrief/static/media/marker.79266f62ae97bf8fcf2cdfb430b9b1a8.svg",
     "main.cd742b7e.css.map": "/tarkov-debrief/static/css/main.cd742b7e.css.map",
-    "main.13ed4de2.js.map": "/tarkov-debrief/static/js/main.13ed4de2.js.map",
+    "main.3c9b81cc.js.map": "/tarkov-debrief/static/js/main.3c9b81cc.js.map",
     "422.6cba3e15.chunk.js.map": "/tarkov-debrief/static/js/422.6cba3e15.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.cd742b7e.css",
-    "static/js/main.13ed4de2.js"
+    "static/js/main.3c9b81cc.js"
   ]
 }
