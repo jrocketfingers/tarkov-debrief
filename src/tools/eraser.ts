@@ -44,17 +44,17 @@ export const useEraser = (canvas: fabric.Canvas | null, setToolOuter: SetToolFn,
   unerasable = unerasableOuter;
 
   useEffect(() => {
-    if(tool.type === ToolType.eraser && maybeCanvas) {
-      maybeCanvas.on("mouse:move", onUse);
-      maybeCanvas.on("mouse:down", onClick);
-      maybeCanvas.on("mouse:up", onRelease);
-      maybeCanvas.selection = false;
+    if (toolOuter.type === ToolType.eraser && canvas) {
+      canvas.on("mouse:move", onUse);
+      canvas.on("mouse:down", onClick);
+      canvas.on("mouse:up", onRelease);
+      canvas.selection = false;
 
       return () => {
-        if(maybeCanvas) {
-          maybeCanvas.off("mouse:move", onUse);
-          maybeCanvas.off("mouse:move", onClick);
-          maybeCanvas.off("mouse:move", onRelease);
+        if (canvas) {
+          canvas.off("mouse:move", onUse);
+          canvas.off("mouse:move", onClick);
+          canvas.off("mouse:move", onRelease);
           active = false;
         }
       };
