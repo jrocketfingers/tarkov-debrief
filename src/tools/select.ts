@@ -20,9 +20,13 @@ export const useSelect = (canvasOuter: fabric.Canvas | null, setToolOuter: SetTo
   useEffect(() => {
     if (toolOuter.type === ToolType.select && canvasOuter) {
       canvasOuter.selection = true;
+      canvasOuter.perPixelTargetFind = false;
 
       return () => {
-        if (canvasOuter) canvasOuter.selection = false;
+        if (canvasOuter) {
+          canvasOuter.selection = false;
+          canvasOuter.perPixelTargetFind = true;
+        }
       };
     }
   }, [canvasOuter, toolOuter]);
