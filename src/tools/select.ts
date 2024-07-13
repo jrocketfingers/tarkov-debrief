@@ -2,7 +2,6 @@ import { fabric } from "fabric";
 import { useEffect } from "react";
 import { Tool, ToolType, SetToolFn } from './tool';
 
-let canvas: fabric.Canvas | null;
 let tool: Tool;
 let setTool: SetToolFn;
 
@@ -14,20 +13,19 @@ export const onChoice = () => {
   });
 }
 
-export const useSelect = (canvasInstance: fabric.Canvas | null, setToolOuter: SetToolFn, toolOuter: Tool) => {
-  canvas = canvasInstance;
+export const useSelect = (canvasOuter: fabric.Canvas | null, setToolOuter: SetToolFn, toolOuter: Tool) => {
   setTool = setToolOuter;
   tool = toolOuter;
 
   useEffect(() => {
-    if(tool.type === ToolType.select && canvas) {
-      canvas.selection = true;
+    if (toolOuter.type === ToolType.select && canvasOuter) {
+      canvasOuter.selection = true;
 
       return () => {
-        if(canvas) canvas.selection = false;
+        if (canvasOuter) canvasOuter.selection = false;
       };
     }
-  }, [setToolOuter, canvasInstance]);
+  }, [canvasOuter, toolOuter]);
 
   return { onChoice };
 };
