@@ -62,7 +62,7 @@ function initializeCanvas() {
     fireRightClick: true,
   });
 
-  // canvas.freeDrawingBrush = new CustomFreeDrawingBrush(canvas);
+  canvas.freeDrawingBrush = new CustomFreeDrawingBrush(canvas);
   canvas.freeDrawingBrush.color = PENCIL_COLOR;
   canvas.freeDrawingBrush.width = brushWidth;
 
