@@ -1,4 +1,4 @@
-import { IEvent } from "fabric/fabric-impl";
+import * as fabric from "fabric";
 import { useEffect } from "react";
 import { SetToolFn, Tool, ToolType } from "./tool";
 
@@ -9,7 +9,7 @@ let setTool: SetToolFn;
 let lastPos: { x: number, y: number } = { x: 0, y: 0 };
 let active: boolean = false;
 
-export const onDrag = (opt: IEvent) => {
+export const onDrag = (opt: fabric.TEvent) => {
   if (!maybeCanvas) return;
   const canvas = maybeCanvas!;
   const e = opt.e as MouseEvent;
@@ -21,7 +21,7 @@ export const onDrag = (opt: IEvent) => {
   lastPos = { x: e.clientX, y: e.clientY };
 };
 
-export const onStartDrag = (opt: IEvent) => {
+export const onStartDrag = (opt: fabric.TEvent) => {
   const e = opt.e as MouseEvent;
   if (e.button === 1) { // middle click
     e.preventDefault();
@@ -37,7 +37,7 @@ export const onStartDrag = (opt: IEvent) => {
   }
 }
 
-export const onStopDrag = (opt: IEvent) => {
+export const onStopDrag = () => {
   if (active) {
     active = false;
     maybeCanvas?.off("mouse:move", onDrag);

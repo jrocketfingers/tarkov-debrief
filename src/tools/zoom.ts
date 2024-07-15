@@ -1,4 +1,4 @@
-import { fabric } from "fabric";
+import * as fabric from "fabric";
 import { useEffect } from "react";
 
 export const useZoom = (canvasInstance: fabric.Canvas | null, brushWidth: number) => {
@@ -18,7 +18,9 @@ export const useZoom = (canvasInstance: fabric.Canvas | null, brushWidth: number
         { x: event.offsetX, y: event.offsetY } as fabric.Point,
         zoom
       );
-      canvas.freeDrawingBrush.width = brushWidth / zoom;
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.width = brushWidth / zoom;
+      }
       opt.e.preventDefault();
       opt.e.stopPropagation();
     });

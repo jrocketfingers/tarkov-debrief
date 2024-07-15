@@ -1,5 +1,4 @@
-import { fabric } from "fabric";
-import { IEvent } from "fabric/fabric-impl";
+import * as fabric from "fabric";
 import { useEffect } from "react";
 import { SetToolFn, Tool, ToolType } from "./tool";
 
@@ -17,7 +16,7 @@ export const onChoice = () => {
   });
 }
 
-export const onUse = (opt: IEvent) => {
+export const onUse = (opt: fabric.TPointerEventInfo<fabric.TPointerEvent>) => {
   if (tool.type === ToolType.eraser && opt.target !== undefined && active) {
     if (
       opt.target instanceof fabric.Image &&

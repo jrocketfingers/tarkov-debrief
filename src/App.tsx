@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { fabric } from "fabric";
+import * as fabric from "fabric";
+import CustomFreeDrawingBrush from "./fabric/brush";
 import { TwitterPicker } from "react-color";
 import { Link, useParams } from "react-router-dom";
-import "fabric-history";
+// import "fabric-history";
 import "./App.css";
 import "./Sidebar.css";
 
@@ -12,11 +13,11 @@ import githubLogo from "./icons/github.png";
 import selectIcon from "./icons/select.svg";
 import pencilIcon from "./icons/pencil.svg";
 import eraserIcon from "./icons/eraser.svg";
-import undoIcon from "./icons/undo.svg";
+// import undoIcon from "./icons/undo.svg";
 import addMarkerIcon from "./icons/marker.svg";
 import saveIcon from "./icons/save.svg";
 
-import { useUndo } from "./tools/undo";
+// import { useUndo } from "./tools/undo";
 
 import thickPMCMarker from "./icons/pmc-thick.svg";
 import mediumPMCMarker from "./icons/pmc-med.svg";
@@ -61,6 +62,7 @@ function initializeCanvas() {
     fireRightClick: true,
   });
 
+  // canvas.freeDrawingBrush = new CustomFreeDrawingBrush(canvas);
   canvas.freeDrawingBrush.color = PENCIL_COLOR;
   canvas.freeDrawingBrush.width = brushWidth;
 
@@ -126,7 +128,7 @@ function App() {
     unerasable
   );
 
-  const { onUse: undo } = useUndo(maybeCanvas, appRef);
+  // const { onUse: undo } = useUndo(maybeCanvas, appRef);
 
   const { onChoice: selectMarker } = useStamp(
     maybeCanvas,
@@ -160,14 +162,14 @@ function App() {
     if (!maybeCanvas) return;
     const canvas = maybeCanvas!;
 
-    fabric.Image.fromURL(maps[map], (imageInstance) => {
+    fabric.Image.fromURL(maps[map]).then((imageInstance) => {
       image = imageInstance;
       image.canvas = canvas;
       image.selectable = false;
       backgroundImage = image;
       unerasable.add(backgroundImage.getSrc());
       canvas.add(image);
-      canvas.clearHistory();
+      // canvas.clearHistory();
     });
 
     function resizeListener() {
@@ -196,7 +198,7 @@ function App() {
             Tarkov Debrief
           </Link>
           <a href={githubUrl}>
-            <img src={githubLogo} alt="github logo" className="App-header-github-logo"/>
+            <img src={githubLogo} alt="github logo" className="App-header-github-logo" />
           </a>
           <a href={githubUrl} className="App-header-github">Read more on github</a>
         </section>
@@ -210,9 +212,9 @@ function App() {
           <button onClick={setEraser}>
             <img src={eraserIcon} alt="eraser" />
           </button>
-          <button onClick={undo}>
-            <img src={undoIcon} alt="undo" />
-          </button>
+          {/* <button onClick={undo}> */}
+          {/*   <img src={undoIcon} alt="undo" /> */}
+          {/* </button> */}
           <button onClick={showSidebar}>
             <img src={addMarkerIcon} alt="undo" />
           </button>

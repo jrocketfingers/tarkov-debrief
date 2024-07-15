@@ -1,4 +1,4 @@
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import { RefObject, useEffect } from 'react';
 
 let canvas: fabric.Canvas | null;
