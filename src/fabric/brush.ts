@@ -1,35 +1,24 @@
 import { Canvas, Point, TEvent, Path, PencilBrush } from 'fabric';
 
-class CustomFreeDrawingBrush extends PencilBrush {
-  private thresholdDistance = 50; // Adjust this threshold as needed
+class ContinuingPencilBrush extends PencilBrush {
+  public continuationThreshold = 50; // Adjust this threshold as needed
+  public computedContinuationThreshold = this.continuationThreshold;
 
-  constructor(canvas: Canvas) {
-    super(canvas);
-  }
+  private endpoints: Point[] = [];
 
-  /**
-   * Override onMouseDown to check for closest end point
-   * @param {Point} pointer
-   * @param {TEvent} event
-   */
   onMouseDown(pointer: Point, { e }: TEvent) {
     if (!this.canvas._isMainEvent(e)) {  // short circuit endpoint search if the event wouldn't trigger at all
       return;
     }
 
     const closestEndPoint = this.findClosestEndPoint(pointer);
-    if (closestEndPoint && this.distance(pointer, closestEndPoint) < this.thresholdDistance) {
+    if (closestEndPoint && this.distance(pointer, closestEndPoint) < this.computedContinuationThreshold) {
       super.onMouseDown(closestEndPoint, { e });
     } else {
       super.onMouseDown(pointer, { e });
     }
   }
 
-  /**
-   * Find the closest end point to the given pointer
-   * @param {Point} pointer
-   * @returns {Point | null} closest end point or null if none found
-   */
   findClosestEndPoint(pointer: Point): Point | null {
     let closestPoint: Point | null = null;
     let minDistance = Infinity;
@@ -61,6 +50,7 @@ class CustomFreeDrawingBrush extends PencilBrush {
    * @returns {Point} end point of the path
    */
   getPathEndPoint(path: Path): Point | null {
+
     const pathData = path.path;
     const lastCommand = pathData[pathData.length - 1];
 
@@ -84,4 +74,4 @@ class CustomFreeDrawingBrush extends PencilBrush {
   }
 }
 
-export default CustomFreeDrawingBrush;
+export default ContinuingPencilBrush;

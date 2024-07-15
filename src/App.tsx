@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
-import CustomFreeDrawingBrush from "./fabric/brush";
+import ContinuingPencilBrush from "./fabric/brush";
 import { TwitterPicker } from "react-color";
 import { Link, useParams } from "react-router-dom";
 // import "fabric-history";
@@ -62,7 +62,7 @@ function initializeCanvas() {
     fireRightClick: true,
   });
 
-  canvas.freeDrawingBrush = new CustomFreeDrawingBrush(canvas);
+  canvas.freeDrawingBrush = new ContinuingPencilBrush(canvas);
   canvas.freeDrawingBrush.color = PENCIL_COLOR;
   canvas.freeDrawingBrush.width = brushWidth;
 
