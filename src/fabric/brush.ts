@@ -1,7 +1,7 @@
 import { Canvas, Point, TEvent, Path, PencilBrush } from 'fabric';
 
 class CustomFreeDrawingBrush extends PencilBrush {
-  private thresholdDistance = 10; // Adjust this threshold as needed
+  private thresholdDistance = 50; // Adjust this threshold as needed
 
   constructor(canvas: Canvas) {
     super(canvas);
@@ -13,20 +13,16 @@ class CustomFreeDrawingBrush extends PencilBrush {
    * @param {TEvent} event
    */
   onMouseDown(pointer: Point, { e }: TEvent) {
-    if (!this.canvas._isMainEvent(e)) {
+    if (!this.canvas._isMainEvent(e)) {  // short circuit endpoint search if the event wouldn't trigger at all
       return;
     }
-    this.drawStraightLine = !!this.straightLineKey && e[this.straightLineKey];
 
     const closestEndPoint = this.findClosestEndPoint(pointer);
     if (closestEndPoint && this.distance(pointer, closestEndPoint) < this.thresholdDistance) {
-      this._prepareForDrawing(closestEndPoint);
+      super.onMouseDown(closestEndPoint, { e });
     } else {
-      this._prepareForDrawing(pointer);
+      super.onMouseDown(pointer, { e });
     }
-
-    this._addPoint(pointer);
-    this._render();
   }
 
   /**
@@ -42,6 +38,11 @@ class CustomFreeDrawingBrush extends PencilBrush {
       if (obj instanceof Path) {
         const path = obj as Path;
         const pathEndPoint = this.getPathEndPoint(path);
+
+        if (!pathEndPoint) {
+          return;
+        }
+
         const distance = this.distance(pointer, pathEndPoint);
 
         if (distance < minDistance) {
@@ -59,12 +60,15 @@ class CustomFreeDrawingBrush extends PencilBrush {
    * @param {Path} path
    * @returns {Point} end point of the path
    */
-  getPathEndPoint(path: Path): Point {
+  getPathEndPoint(path: Path): Point | null {
     const pathData = path.path;
     const lastCommand = pathData[pathData.length - 1];
-    const lastCoords = lastCommand.slice(-2);
 
-    return new Point(lastCoords[0], lastCoords[1]);
+    if (lastCommand[0] === 'Z') {
+      return null;
+    }
+
+    return new Point(lastCommand[1], lastCommand[2]); // [0] is the command type -- we just care about coords
   }
 
   /**
