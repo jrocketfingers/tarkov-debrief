@@ -1,11 +1,5 @@
-import { Point, TEvent, Path, PencilBrush } from 'fabric';
+import { Point, TEvent, Path, PencilBrush, Group } from 'fabric';
 import type { util } from 'fabric';
-
-type TNotCloseCommand =
-  | util.TParsedAbsoluteMoveToCommand
-  | util.TParsedAbsoluteLineCommand
-  | util.TParsedAbsoluteCubicCurveCommand
-  | util.TParsedAbsoluteQuadraticCurveCommand;
 
 class ContinuingPencilBrush extends PencilBrush {
   public continuationThreshold = 50; // Adjust this threshold as needed
@@ -16,12 +10,33 @@ class ContinuingPencilBrush extends PencilBrush {
   public arrowLength = 20;
   public arrowAngle = 45 * Math.PI / 180;
 
+  private _arrow: Path | undefined;
+
+  _prepareArrow() {
+    this._arrow = new Path([
+      ["M", 0, 0],
+      ["L", 0, this.arrowLength],
+      ["M", 0, 0],
+      ["L", this.arrowLength, 0],
+    ], {
+      fill: null,
+      stroke: this.color,
+      strokeWidth: this.width,
+      strokeLineCap: this.strokeLineCap,
+      strokeMiterLimit: this.strokeMiterLimit,
+      strokeLineJoin: this.strokeLineJoin,
+      strokeDashArray: this.strokeDashArray,
+    });
+  }
+
   onMouseDown(pointer: Point, { e }: TEvent) {
     if (!this.canvas._isMainEvent(e)) {  // short circuit endpoint search if the event wouldn't trigger at all
       return;
     }
 
-    const closestEndPoint = this.findClosestEndPoint(pointer);
+    this._prepareArrow();
+
+    const closestEndPoint = this.findClosestEndPoint(pointer); // are we continuing a path?
     if (closestEndPoint && this._distance(pointer, closestEndPoint) < this.computedContinuationThreshold) {
       super.onMouseDown(closestEndPoint, { e });
     } else {
@@ -83,27 +98,36 @@ class ContinuingPencilBrush extends PencilBrush {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  createPath(pathData: util.TSimplePathData): Path {
-    let pathWithArrow = this._drawArrow(pathData);
+  createPath(pathData: util.TSimplePathData): Group {
+    let pathWithArrow = this._placeArrow(pathData);
 
-    return super.createPath(pathWithArrow);
+    const strokePath = super.createPath(pathWithArrow);
+    const strokeWithArrow = new Group([strokePath, this._arrow]);
+
+    return strokeWithArrow;
   }
 
-  _drawArrow(pathData: util.TSimplePathData) {
-    let segments = pathData; // as (util.TParsedAbsoluteLineCommand | util.TParsedAbsoluteQuadraticCurveCommand | util.TParsedMoveToCommand)[];
-    if (segments.length < 2) return segments;
+  _getPoints(): Point[] {
+    return (this as any)._points;
+  }
 
-    const trailLength = Math.min(Math.max(segments.length, this.minTrailLength), this.maxTrailLength);
+  _addPoint(point: Point): boolean {
+    const result = super._addPoint(point);
+
+    const points = this._getPoints();
+
+    return result
+  }
+
+  _placeArrow(points: Point[]) {
+    if (points.length < 2) return points;
+
+    const trailLength = Math.min(Math.max(points.length, this.minTrailLength), this.maxTrailLength);
     let arrowVector = new Point(0, 0);
 
-    for (let i = segments.length - trailLength; i < segments.length - 1; i++) {
-      if (segments[i][0] === 'Z') continue; // skip the Z command (close path)
-      if (segments[i + 1][0] === 'Z') continue; // skip the Z command (close path)
-
-      const segment1 = segments[i] as TNotCloseCommand;
-      const segment2 = segments[i + 1] as TNotCloseCommand;
-      const p1 = new Point(segment1[1], segment1[2]);
-      const p2 = new Point(segment2[1], segment2[2]);
+    for (let i = points.length - trailLength; i < points.length - 1; i++) {
+      const p1 = new Point(points[i].x, points[i].y);
+      const p2 = new Point(points[i + 1].x, points[i + 1].y);
       arrowVector = arrowVector.add(p2.subtract(p1));
     }
     arrowVector = arrowVector.scalarDivide(trailLength);
@@ -116,25 +140,12 @@ class ContinuingPencilBrush extends PencilBrush {
     const arrowLeft = arrowHead.rotate(this.arrowAngle + Math.PI);
     const arrowRight = arrowHead.rotate(-this.arrowAngle + Math.PI);
 
-    // region: find the last segment that isn't a close path
-    let i = 1;
-    while (segments[segments.length - i][0] === 'Z' && i <= segments.length) i--; // go back to a segment that isn't close path
-    if (i > segments.length) {
-      return segments; // no path to draw arrow on
-    }
-    const endPoint = segments[segments.length - i] as TNotCloseCommand;
-    // endregion: find the last segment that isn't a close path
+    const pointer = points[points.length - 1];
 
-    const pointer = new Point(endPoint[1], endPoint[2]);
+    this._arrow.translateTo(pointer.x, pointer.y);
+    this._arrow.rotate(arrowHead.angleFrom({ x: 0, y: 0 }));
 
-    segments = segments.concat([
-      ['M', pointer.x + arrowLeft.x, pointer.y + arrowLeft.y],
-      ['L', pointer.x, pointer.y],
-      ['L', pointer.x + arrowRight.x, pointer.y + arrowRight.y]
-    ]);
-
-
-    return segments;
+    return points;
   }
 }
 
