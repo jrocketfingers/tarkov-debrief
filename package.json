@@ -4,7 +4,7 @@
   "homepage": "https://jrocketfingers.github.io/tarkov-debrief",
   "private": true,
   "dependencies": {
-    "fabric": "^4.3.0",
+    "fabric": "^7.0.0",
     "fabric-history": "^1.6.0",
     "react": "^17.0.1",
     "react-color": "^2.19.3",
