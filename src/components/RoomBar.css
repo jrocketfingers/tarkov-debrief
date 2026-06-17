@@ -1,0 +1,144 @@
+/* RoomBar — the multiplayer room status bar between the header and canvas.
+ *
+ * Follows the tan-on-gunmetal design system established by OperatorChips.css:
+ * background #282c34 (gunmetal), text #c2b7a3 (tan), border #5c513d (walnut),
+ * font Bender, square corners.
+ */
+
+.RoomBar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: #1e2229;
+  border-bottom: 1px solid #5c513d;
+  font-family: 'Bender', sans-serif;
+  font-size: 13px;
+  color: #9a8866;
+  /* Keep the bar compact — canvas flex-grows to fill the rest. */
+  flex-shrink: 0;
+}
+
+.RoomBar-label {
+  color: #c2b7a3;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.RoomBar-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 320px;
+  height: 26px;
+  padding: 0 8px;
+  background: #282c34;
+  border: 1px solid #5c513d;
+  color: #c2b7a3;
+  font-family: 'Bender', sans-serif;
+  font-size: 13px;
+  /* Monospaced for UUID readability */
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.RoomBar-input::placeholder {
+  color: #5c513d;
+}
+
+.RoomBar-input:focus {
+  border-color: #9a8866;
+}
+
+.RoomBar-btn {
+  height: 26px;
+  padding: 0 10px;
+  background: #c2b7a3;
+  border: 1px solid #5c513d;
+  color: #1e2229;
+  font-family: 'Bender', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.RoomBar-btn:hover {
+  background: #7b6c51;
+  color: #fff;
+}
+
+.RoomBar-btn--leave {
+  background: transparent;
+  color: #9a8866;
+  border-color: #5c513d;
+}
+
+.RoomBar-btn--leave:hover {
+  background: #5c3d3d;
+  color: #fff;
+  border-color: #8b4a4a;
+}
+
+/* Status pill */
+
+.RoomBar-status {
+  padding: 2px 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.RoomBar-status--idle {
+  color: #5c513d;
+  border-color: #5c513d;
+}
+
+.RoomBar-status--connecting {
+  color: #9a8866;
+  border-color: #9a8866;
+  /* Subtle pulse so the user sees it's trying. */
+  animation: RoomBar-pulse 1.2s ease-in-out infinite;
+}
+
+.RoomBar-status--connected {
+  color: #4a8c4a;
+  border-color: #4a8c4a;
+}
+
+.RoomBar-status--reconnecting {
+  color: #9a8866;
+  border-color: #9a8866;
+  animation: RoomBar-pulse 1.2s ease-in-out infinite;
+}
+
+/* awaiting-snapshot: blue pulse while receiving canvas from eldest peer. §11.1 */
+.RoomBar-status--awaiting-snapshot {
+  color: #4a6a8c;
+  border-color: #4a6a8c;
+  animation: RoomBar-pulse 1.2s ease-in-out infinite;
+}
+
+.RoomBar-status--error {
+  color: #8c4a4a;
+  border-color: #8c4a4a;
+}
+
+/* P2P: disconnected is same as idle (offline) */
+.RoomBar-status--disconnected {
+  color: #5c513d;
+  border-color: #5c513d;
+}
+
+@keyframes RoomBar-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.RoomBar-peers {
+  color: #9a8866;
+  font-size: 12px;
+  white-space: nowrap;
+}

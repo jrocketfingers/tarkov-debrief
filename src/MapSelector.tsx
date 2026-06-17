@@ -12,6 +12,7 @@ import lighthouse from "./maps/lighthouse.webp";
 import factory from "./maps/factory.webp";
 import streets from "./maps/streets.webp";
 import groundZero from "./maps/ground-zero.webp";
+import icebreaker from "./maps/icebreaker.webp";
 
 import customsThumbnail from "./maps/customs-thumbnail.webp";
 import interchangeThumbnail from "./maps/interchange-thumbnail.webp";
@@ -23,8 +24,9 @@ import lighthouseThumbnail from "./maps/lighthouse-thumbnail.webp";
 import factoryThumbnail from "./maps/factory-thumbnail.webp";
 import streetsThumbnail from "./maps/streets-thumbnail.webp";
 import groundZeroThumbnail from "./maps/ground-zero-thumbnail.webp";
+import icebreakerThumbnail from "./maps/icebreaker-thumbnail.webp";
 
-export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse, streets, groundZero};
+export const maps: Record<string, string> = {customs, interchange, woods, labs, reserve, shoreline, factory, lighthouse, streets, groundZero, icebreaker};
 export const thumbnails: Record<string, string> = {
   customs: customsThumbnail,
   interchange: interchangeThumbnail,
@@ -36,6 +38,7 @@ export const thumbnails: Record<string, string> = {
   lighthouse: lighthouseThumbnail,
   streets: streetsThumbnail,
   groundZero: groundZeroThumbnail,
+  icebreaker: icebreakerThumbnail,
 };
 
 function MapSelector() {

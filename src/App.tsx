@@ -72,6 +72,12 @@ import {
   type MarkerOption,
 } from "./components/MarkerRadial";
 import { HotkeysOverlay } from "./components/HotkeysOverlay";
+import { RoomBar } from "./components/RoomBar";
+import { getOrCreatePeerId, usePeerRoom } from "./collab/usePeerRoom";
+import { useRemoteCanvas, isApplyingRemote, EXTRAS } from "./collab/useRemoteCanvas";
+import { GhostCursorLayer } from "./collab/GhostCursorLayer";
+import { usePartialPath } from "./collab/usePartialPath";
+import { isFlagged, REPLAY, TRANSIENT } from "./tools/undo";
 
 const githubUrl = "https://github.com/jrocketfingers/tarkov-debrief";
 
@@ -95,7 +101,12 @@ function initializeCanvas() {
   const canvas = new fabric.Canvas("canvas", {
     height: defaultSize.height,
     width: defaultSize.width,
-    isDrawingMode: true,
+    // Start false — useFreehand sets it true when pencil/arrow is active.
+    // Starting true here would leave the canvas in drawing mode for any
+    // non-drawing tool persisted in localStorage (e.g. marker), letting the
+    // brush capture strokes without a before:path:created handler registered,
+    // so those strokes would never get an __id and could not be broadcast.
+    isDrawingMode: false,
     perPixelTargetFind: true,
     selection: false,
     fireMiddleClick: true,
@@ -211,6 +222,207 @@ function App() {
   );
   const [phase, setPhase] = useState<Phase>(() => loadPhase());
 
+  // === P3 multiplayer room state ===
+  //
+  // peerId is stable per browser tab (sessionStorage). roomId is null when the
+  // user is not in a room, or a UUID v4 when connected. See design doc §6.1.
+  const [peerId] = useState<string>(getOrCreatePeerId);
+
+  // Auto-join: read the room ID from the URL query string on first render so
+  // that pasting a copied link auto-connects without requiring a manual paste
+  // into the RoomBar input. §11.2
+  const [roomId, setRoomId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const rid = params.get('room');
+    const UUID_V4_RE =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return rid && UUID_V4_RE.test(rid) ? rid : null;
+  });
+
+  // useMemo so activeOperator is stable for hooks that depend on it.
+  // Declared here (before useRoom) so operatorId can be passed on join.
+  const activeOperator = useMemo(
+    () => getActiveOperator(operators, activeOperatorId),
+    [operators, activeOperatorId],
+  );
+  // usePeerRoom replaces useRoom for the P2P variant. Canvas is needed so the
+  // eldest peer can serialize it for snapshot requests. §6.2
+  const roomRoom = usePeerRoom(roomId, peerId, activeOperator?.id ?? null, maybeCanvas);
+  const roomStatus = roomRoom.state.status;
+  // Flatten Map → PeerInfo[] for GhostCursorLayer and peerCount display.
+  const peers = roomRoom.state.status === 'connected'
+    ? Array.from(roomRoom.state.peers.values())
+    : [];
+  const roomOnMessage = roomRoom.onMessage;
+  const roomBroadcast = roomRoom.broadcast;
+  // stateRef for chip-claim: read peers at effect-fire time without subscribing
+  // to a snapshot InboundMessage (P2P has no relay-style snapshot message). §10.1
+  const roomStateRef = roomRoom.stateRef;
+
+  const handleRoomChange = useCallback((id: string | null) => {
+    setRoomId(id);
+  }, []);
+
+  // P3.5: join-flow toast — "You're drawing as Alpha — tap a chip to change."
+  // Auto-dismisses after 3 s. §11.2
+  const [joinToastName, setJoinToastName] = useState<string | null>(null);
+  const joinToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!joinToastName) return;
+    if (joinToastTimerRef.current) clearTimeout(joinToastTimerRef.current);
+    joinToastTimerRef.current = setTimeout(() => setJoinToastName(null), 3000);
+    return () => {
+      if (joinToastTimerRef.current) clearTimeout(joinToastTimerRef.current);
+    };
+  }, [joinToastName]);
+
+  // Ref-mirrors for claim-on-join effect so it reads current state without
+  // re-running when those values change (only roomStatus is the trigger). §10.1
+  const operatorsRefP35 = useRef(operators);
+  operatorsRefP35.current = operators;
+  const activeOperatorIdRef = useRef(activeOperatorId);
+  activeOperatorIdRef.current = activeOperatorId;
+
+  // P3.5: claim-on-join — when the room transitions to connected, re-claim an
+  // existing chip immediately, or auto-assign the first unclaimed one. §10.1
+  //
+  // P2P: unlike the relay variant, 'connected' fires AFTER the snapshot has been
+  // applied and peerInfo is fully populated. We read claimed chips directly from
+  // roomStateRef (instead of subscribing to a snapshot InboundMessage which P2P
+  // doesn't emit). React has committed the connected state before effects run, so
+  // roomStateRef.current reflects the current peers at effect-fire time. §10.1
+  //
+  // Race fix: when two peers join simultaneously, both see each other in peers
+  // but neither has received the other's chip:claim yet, so claimedIds is empty
+  // for both. Deterministic rank-based assignment prevents collision: sort all
+  // peer IDs (self + remote), each peer picks the operator at its own rank index.
+  // Both peers compute the same sorted order, so they independently choose
+  // different operators without needing to see each other's claim first.
+  useEffect(() => {
+    if (roomStatus !== 'connected') return;
+
+    const currentId = activeOperatorIdRef.current;
+    if (currentId) {
+      // Already have a chip (from localStorage or previous session) — re-claim
+      // it so other peers see the badge. chip-change effect won't fire because
+      // activeOperatorId didn't change.
+      roomBroadcast({ type: 'chip:claim', operatorId: currentId });
+      setJoinToastName(
+        operatorsRefP35.current.find((op) => op.id === currentId)?.name ?? null,
+      );
+      return;
+    }
+
+    // No saved chip — read which chips are claimed from the current room state.
+    // roomStateRef is stable and its .current reflects the just-committed state.
+    const st = roomStateRef.current;
+    // stateRef.current is RefObject<T>.current which TypeScript types as T|null,
+    // though in practice it's always initialized before this effect runs.
+    if (!st || st.status !== 'connected') return;
+    const claimedIds = new Set(
+      Array.from(st.peers.values()).map((p) => p.operatorId).filter(Boolean),
+    );
+    const unclaimedOps = operatorsRefP35.current.filter((op) => !claimedIds.has(op.id));
+    if (unclaimedOps.length === 0) return;
+
+    // Rank-based selection: include self in the sorted peer list so every peer
+    // sees the same total set and picks a unique slot by index. Peers that
+    // already claimed a chip are not in this branch (early-return above), so
+    // only "fresh" peers compete here. If there are more unclaimed peers than
+    // unclaimed operators, the last peers fall back to the first operator
+    // (harmless: they can always manually switch chips afterward).
+    const allPeerIds = [peerId, ...Array.from(st.peers.keys())].sort();
+    const myRank = allPeerIds.indexOf(peerId);
+    const toAssign = unclaimedOps[myRank] ?? unclaimedOps[0];
+    setActiveOperatorId(toAssign.id);
+    setJoinToastName(toAssign.name);
+    // chip:claim is broadcast by the chip-change effect after the state
+    // update triggers a re-render (activeOperatorId null → toAssign.id).
+  // roomStateRef and peerId are stable refs/values — identity never changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomStatus, roomBroadcast]);
+
+  // P3.5: broadcast chip:release + chip:claim whenever the user changes their
+  // active operator while connected. Prev-value tracking via ref ensures we
+  // always know what to release. §10.1
+  const prevActiveOperatorIdRef = useRef<OperatorId | null>(null);
+  useEffect(() => {
+    const prev = prevActiveOperatorIdRef.current;
+    prevActiveOperatorIdRef.current = activeOperatorId;
+
+    if (roomStatus !== 'connected') return;
+    if (prev === activeOperatorId) return; // no change
+    if (prev !== null) roomBroadcast({ type: 'chip:release', operatorId: prev });
+    if (activeOperatorId !== null) roomBroadcast({ type: 'chip:claim', operatorId: activeOperatorId });
+  }, [activeOperatorId, roomStatus, roomBroadcast]);
+
+  // P3.5: conflict resolution — if a remote peer claims the same operator I
+  // hold, the peer with the LOWER peerId wins; I yield to the next unclaimed
+  // operator. Watches TWO message types for two distinct race shapes:
+  //
+  //   chip:claim — remote peer sends a fresh claim after both are connected.
+  //     Covers the localStorage-same-chip case where both re-claim the same
+  //     stored op on join.
+  //
+  //   peer:joined — remote peer's operatorId arrives via p2p:join handshake
+  //     when two peers first meet. This is the dominant path when BOTH hit the
+  //     12-second first-peer timer independently (each goes 'connected' with an
+  //     empty room, both claim Alpha, then meet). Their chip:claim broadcasts
+  //     had zero recipients at claim-time, so no chip:claim ever arrives — only
+  //     peer:joined carries the operatorId at meeting time.
+  //
+  // Lower peerId wins so both sides independently agree on who yields without
+  // needing an extra round-trip. §10.1
+  useEffect(() => {
+    const unsub = roomOnMessage((msg) => {
+      let conflictOp: string | null = null;
+      let fromPeer: string | null = null;
+
+      if (msg.type === 'chip:claim') {
+        conflictOp = msg.operatorId;
+        fromPeer = msg.peerId;
+      } else if (msg.type === 'peer:joined' && msg.operatorId) {
+        // p2p:join includes operatorId; dispatched as peer:joined by usePeerRoom.
+        conflictOp = msg.operatorId;
+        fromPeer = msg.peerId;
+      }
+
+      if (!conflictOp || !fromPeer) return;
+      const mine = activeOperatorIdRef.current;
+      // Only act when the incoming op conflicts with ours.
+      if (!mine || conflictOp !== mine) return;
+      // Lower peerId wins — if remote is higher than us, we keep our claim.
+      if (fromPeer >= peerId) return;
+      // We lose. Pick the next operator not yet taken by any peer (including
+      // the winner who just took `mine`).
+      const st = roomStateRef.current;
+      const takenIds = new Set([
+        mine,
+        ...(st?.status === 'connected'
+          ? Array.from(st.peers.values()).map((p) => p.operatorId).filter(Boolean)
+          : []),
+      ]);
+      const next = operatorsRefP35.current.find((op) => !takenIds.has(op.id));
+      setActiveOperatorId(next?.id ?? null);
+    });
+    return unsub;
+    // roomOnMessage is stable (useCallback []). activeOperatorIdRef, peerId,
+    // roomStateRef, operatorsRefP35 are stable refs/values. §10.1
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomOnMessage]);
+
+  // Keep the URL query string in sync with roomId so the address bar always
+  // holds a copyable link, and so a page reload re-joins the same room. §11.2
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (roomId) {
+      url.searchParams.set('room', roomId);
+    } else {
+      url.searchParams.delete('room');
+    }
+    window.history.replaceState(null, '', url.toString());
+  }, [roomId]);
+
   // Persist on every change. localStorage writes are synchronous in
   // jsdom and fast in browsers; no debounce needed for the change
   // volumes this UI produces.
@@ -237,11 +449,6 @@ function App() {
     saveTool(tool.type);
   }, [tool.type]);
 
-  const activeOperator = useMemo(
-    () => getActiveOperator(operators, activeOperatorId),
-    [operators, activeOperatorId],
-  );
-
   const save = () => {
     if (maybeCanvas) {
       const url = maybeCanvas.toDataURL({ multiplier: 3 });
@@ -254,6 +461,78 @@ function App() {
   // notably useArrow's path→group swap (design doc §5.1 step 8).
   const undoApi = useUndo(maybeCanvas, unerasable);
   const { onUndo } = undoApi;
+
+  // P3.2: apply remote canvas deltas from peers without touching the
+  // local undo stack. roomOnMessage is stable (useCallback, empty deps).
+  // See design_p3_multiplayer.md §7.
+  useRemoteCanvas(maybeCanvas, { onMessage: roomOnMessage }, unerasable);
+
+  // P3.4: broadcast in-progress freehand strokes as partial-path frames so
+  // remote peers see a live ghost while the user draws. See §8.
+  usePartialPath(
+    maybeCanvas,
+    roomOnMessage,
+    roomBroadcast,
+    roomStatus,
+    operators,
+    activeOperatorId,
+    phase,
+  );
+
+  // P3.3: track the canvas viewport transform in React state so
+  // GhostCursorLayer re-renders correctly after pan/zoom. Must be the full
+  // 6-element affine matrix — a scalar zoom is insufficient once the user
+  // has panned (R8). fabric v7 has no dedicated viewport:transformed event,
+  // so we read canvas.viewportTransform on after:render (fires after every
+  // pan/zoom/draw) and only schedule a React update when the matrix changed.
+  const [viewportTransform, setViewportTransform] = useState<number[]>([1, 0, 0, 1, 0, 0]);
+  useEffect(() => {
+    if (!maybeCanvas) return;
+    const canvas = maybeCanvas;
+    const onRender = () => {
+      const vpt = canvas.viewportTransform;
+      setViewportTransform((prev) => {
+        // Only re-render when the transform actually changed.
+        if (prev.length === vpt.length && prev.every((v, i) => v === vpt[i])) return prev;
+        return [...vpt];
+      });
+    };
+    canvas.on('after:render', onRender);
+    return () => canvas.off('after:render', onRender);
+  }, [maybeCanvas]);
+
+  // P3.3: broadcast local cursor position to peers at ~30 fps. Canvas coords
+  // (pre-viewportTransform) so receivers can apply their own pan/zoom. §9.3
+  const lastCursorSend = useRef(0);
+  const lastCursorPos = useRef({ x: -Infinity, y: -Infinity });
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !maybeCanvas) return;
+    const canvas = maybeCanvas;
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (roomStatus !== 'connected') return;
+      const now = Date.now();
+      if (now - lastCursorSend.current < 33) return; // 30 fps cap
+      // Convert screen coordinates to canvas (scene) coordinates by inverting
+      // the current viewport transform. fabric v7 removed restorePointerVpt;
+      // invertTransform + transformPoint is the v7 equivalent. §9.3
+      const pt = fabric.util.transformPoint(
+        new fabric.Point(e.offsetX, e.offsetY),
+        fabric.util.invertTransform(canvas.viewportTransform),
+      );
+      // Dead-zone: skip if cursor hasn't moved enough to matter for ghost rendering.
+      const x = Math.round(pt.x * 10) / 10;
+      const y = Math.round(pt.y * 10) / 10;
+      if (Math.abs(x - lastCursorPos.current.x) < 2 && Math.abs(y - lastCursorPos.current.y) < 2) return;
+      lastCursorSend.current = now;
+      lastCursorPos.current = { x, y };
+      roomBroadcast({ type: 'cursor', x, y });
+    };
+
+    container.addEventListener('mousemove', onMouseMove);
+    return () => container.removeEventListener('mousemove', onMouseMove);
+  }, [maybeCanvas, roomStatus, roomBroadcast]);
 
   // P2: replay timeline. Subscribes to object:added/:removed and
   // owns the playhead + speed + play/pause state. Consumed by the
@@ -383,6 +662,8 @@ function App() {
     setSidebar,
     tool,
     setTool,
+    activeOperatorId,
+    phase,
   );
 
   usePan(maybeCanvas, setTool, tool);
@@ -453,6 +734,111 @@ function App() {
       canvas.off("object:removed", recompute);
     };
   }, [maybeCanvas]);
+
+  // === P3.2 — Broadcast local canvas actions to the room ===
+  //
+  // Named handler refs (const onAdd = ...) are REQUIRED here — see
+  // design_p3_multiplayer.md §7.6 (R15, Check B): canvas.off(event, fn)
+  // needs the exact same function reference. Anonymous lambdas passed to
+  // canvas.off without a reference would remove ALL handlers for the
+  // event, including useUndo's listeners.
+  useEffect(() => {
+    if (!maybeCanvas || !roomId) return;
+    const canvas = maybeCanvas;
+
+    const onAdd = ({ target }: { target: fabric.FabricObject }) => {
+      // Skip remote-applied objects (would echo them back to the room). §7.1
+      if (isApplyingRemote()) return;
+      // Skip undo-replay and transient preview objects. §7.6
+      if (isFlagged(target, REPLAY) || isFlagged(target, TRANSIENT)) return;
+      // Map image and other untagged objects have no __id; don't broadcast.
+      const id = readId(target);
+      if (!id) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const serialized = (target as any).toObject(EXTRAS);
+      // toObject cast: EXTRAS contains custom __-prefixed props outside
+      // fabric's strict type — same pattern as tagObject in metadata.ts.
+      roomBroadcast({ type: 'delta:added', obj: serialized });
+    };
+
+    const onModified = ({ target }: { target: fabric.FabricObject }) => {
+      if (isApplyingRemote()) return;
+      if (isFlagged(target, REPLAY) || isFlagged(target, TRANSIENT)) return;
+
+      // Multi-selection: fabric fires object:modified on an ActiveSelection
+      // (a transient group with no __id). Broadcast each child's absolute
+      // transform by composing the group matrix with the child's own matrix.
+      // child.calcTransformMatrix() already returns the absolute canvas
+      // transform when the child has a group parent. §7.6
+      if (target instanceof fabric.ActiveSelection) {
+        const now = Date.now();
+        for (const child of target.getObjects()) {
+          const childId = readId(child as fabric.FabricObject);
+          if (!childId) continue;
+          if (isFlagged(child as fabric.FabricObject, TRANSIENT)) continue;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (child as any).__lastModifiedTs = now;
+          const { translateX: left, translateY: top, scaleX, scaleY, angle } =
+            fabric.util.qrDecompose((child as fabric.FabricObject).calcTransformMatrix());
+          roomBroadcast({
+            type: 'delta:modified',
+            id: childId,
+            isGroup: child instanceof fabric.Group,
+            patch: child instanceof fabric.Group
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ? (child as any).toObject(EXTRAS)
+              : { left, top, scaleX, scaleY, angle },
+          });
+        }
+        return;
+      }
+
+      const id = readId(target);
+      if (!id) return;
+      const isGroup = target instanceof fabric.Group;
+      // Record local modification time for client-side conflict resolution
+      // when receiving delta:modified from other peers. §7.4
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (target as any).__lastModifiedTs = Date.now();
+      roomBroadcast({
+        type: 'delta:modified',
+        id,
+        isGroup,
+        // Groups need full re-serialization (internal geometry may change).
+        // Plain objects send only transform props to keep frames small. §4.2
+        patch: isGroup
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ? (target as any).toObject(EXTRAS)
+          : {
+              left: target.left,
+              top: target.top,
+              scaleX: target.scaleX,
+              scaleY: target.scaleY,
+              angle: target.angle,
+            },
+      });
+    };
+
+    const onRemoved = ({ target }: { target: fabric.FabricObject }) => {
+      if (isApplyingRemote()) return;
+      // Skip undo replays that remove objects as part of an undo "add".
+      if (isFlagged(target, REPLAY)) return;
+      if (isFlagged(target, TRANSIENT)) return;
+      const id = readId(target);
+      if (!id) return; // map image and untagged objects
+      roomBroadcast({ type: 'delta:removed', id });
+    };
+
+    canvas.on('object:added', onAdd);
+    canvas.on('object:modified', onModified);
+    canvas.on('object:removed', onRemoved);
+
+    return () => {
+      canvas.off('object:added', onAdd);
+      canvas.off('object:modified', onModified);
+      canvas.off('object:removed', onRemoved);
+    };
+  }, [maybeCanvas, roomId, roomBroadcast]);
 
   // === Brush color follows active operator ===
   //
@@ -1017,6 +1403,7 @@ function App() {
             activeId={activeOperatorId}
             onClick={onOperatorClick}
             onShiftClick={onOperatorShiftClick}
+            peers={peers}
           />
           <PhaseToggle phase={phase} onChange={setPhase} />
         </section>
@@ -1051,6 +1438,15 @@ function App() {
           </button>
         </section>
       </header>
+      {/* P3 room status bar. Sits between header and canvas so it doesn't
+          disrupt the existing header layout. Hidden when not in use via the
+          compact single-row height. See design_p3_multiplayer.md §9.2. */}
+      <RoomBar
+        roomId={roomId}
+        status={roomStatus}
+        peerCount={peers.length + 1}
+        onChange={handleRoomChange}
+      />
       {/* Sidebar stays as a stub for the color picker only — the
           marker section moved to the radial below. Full removal
           of the sidebar (and the react-color dep) is tech debt
@@ -1074,6 +1470,22 @@ function App() {
             when the timeline is empty. See
             src/components/Scrubber.tsx and design_p2_slice.md §8. */}
         <Scrubber timeline={timeline} />
+        {/* P3.3: ghost cursor overlay. Only rendered when peers are present
+            with cursor positions. pointer-events:none — passes through to
+            canvas. Coordinate conversion uses the full viewportTransform
+            matrix (not just zoom) to handle pan correctly. §9.1 */}
+        <GhostCursorLayer
+          peers={peers}
+          operators={operators}
+          viewportTransform={viewportTransform}
+        />
+        {/* P3.5: join-flow toast. Appears once on room join, auto-dismisses
+            after 3 s. pointer-events:none so it doesn't block canvas input. §11.2 */}
+        {joinToastName && (
+          <div className="JoinToast" role="status" aria-live="polite">
+            You&apos;re drawing as {joinToastName} — tap a chip to change.
+          </div>
+        )}
       </div>
       {radialCenter && (
         <MarkerRadial

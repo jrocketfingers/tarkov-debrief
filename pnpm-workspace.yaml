@@ -26,3 +26,8 @@ overrides:
   tar@<=7.5.9: '>=7.5.10'
 
 minimumReleaseAge: 7200
+
+allowBuilds:
+  canvas: true
+  esbuild: true
+  sharp: true

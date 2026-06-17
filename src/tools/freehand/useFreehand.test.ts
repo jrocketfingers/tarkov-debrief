@@ -88,6 +88,7 @@ describe("useFreehand", () => {
     rerender({ op: "bravo", ph: "plan" });
 
     const path = {} as unknown as Parameters<typeof readOperator>[0];
+    fire(mock, "before:path:created", { path });
     fire(mock, "path:created", { path });
 
     expect(readOperator(path)).toBe("bravo");
@@ -136,6 +137,7 @@ describe("useFreehand", () => {
     );
 
     const path = {} as unknown as Parameters<typeof readMarkType>[0];
+    fire(mock, "before:path:created", { path });
     fire(mock, "path:created", { path });
 
     expect(readMarkType(path)).toBe("arrow");
@@ -162,6 +164,7 @@ describe("useFreehand", () => {
     );
 
     const path = {} as unknown as Parameters<typeof readOperator>[0];
+    fire(mock, "before:path:created", { path });
     fire(mock, "path:created", { path });
 
     expect(onPathCreated).toHaveBeenCalledTimes(1);

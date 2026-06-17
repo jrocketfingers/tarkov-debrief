@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { OperatorChips } from "./OperatorChips";
 import { DEFAULT_OPERATORS } from "@/state/operators";
+import type { PeerInfo } from "@/collab/protocol";
 
 describe("OperatorChips", () => {
   it("renders one button per operator", () => {
@@ -67,6 +68,81 @@ describe("OperatorChips", () => {
       { shiftKey: true },
     );
     expect(onShiftClick).toHaveBeenCalledWith(DEFAULT_OPERATORS[2].id);
+  });
+
+  // ---- P3.5: peer badges ------------------------------------------------
+
+  it("renders no badges when peers prop is omitted", () => {
+    render(
+      <OperatorChips
+        operators={DEFAULT_OPERATORS}
+        activeId={null}
+        onClick={vi.fn()}
+        onShiftClick={vi.fn()}
+      />,
+    );
+    expect(document.querySelectorAll(".OperatorChip-badge")).toHaveLength(0);
+  });
+
+  it("renders a badge on the chip claimed by a peer", () => {
+    const peers: PeerInfo[] = [
+      { id: "bob", operatorId: DEFAULT_OPERATORS[0].id, cursor: null },
+    ];
+    render(
+      <OperatorChips
+        operators={DEFAULT_OPERATORS}
+        activeId={null}
+        onClick={vi.fn()}
+        onShiftClick={vi.fn()}
+        peers={peers}
+      />,
+    );
+    // Badge appears only on the Alpha chip.
+    expect(
+      screen.getAllByTestId(`chip-badge-${DEFAULT_OPERATORS[0].id}`),
+    ).toHaveLength(1);
+    // No badge on other chips.
+    expect(
+      screen.queryByTestId(`chip-badge-${DEFAULT_OPERATORS[1].id}`),
+    ).toBeNull();
+  });
+
+  it("renders multiple badges when multiple peers claim the same chip", () => {
+    const peers: PeerInfo[] = [
+      { id: "bob", operatorId: DEFAULT_OPERATORS[0].id, cursor: null },
+      { id: "carol", operatorId: DEFAULT_OPERATORS[0].id, cursor: null },
+    ];
+    render(
+      <OperatorChips
+        operators={DEFAULT_OPERATORS}
+        activeId={null}
+        onClick={vi.fn()}
+        onShiftClick={vi.fn()}
+        peers={peers}
+      />,
+    );
+    expect(
+      screen.getAllByTestId(`chip-badge-${DEFAULT_OPERATORS[0].id}`),
+    ).toHaveLength(2);
+  });
+
+  it("updates aria-label to include peer count when chip is claimed", () => {
+    const peers: PeerInfo[] = [
+      { id: "bob", operatorId: DEFAULT_OPERATORS[1].id, cursor: null },
+    ];
+    render(
+      <OperatorChips
+        operators={DEFAULT_OPERATORS}
+        activeId={null}
+        onClick={vi.fn()}
+        onShiftClick={vi.fn()}
+        peers={peers}
+      />,
+    );
+    const chip = screen.getByRole("button", {
+      name: new RegExp(`${DEFAULT_OPERATORS[1].name}.*1 peer`),
+    });
+    expect(chip).toBeTruthy();
   });
 
   it("renders hidden state with the aria label and visual class", () => {

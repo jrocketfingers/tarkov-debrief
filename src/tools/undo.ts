@@ -36,6 +36,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { getSpecByMarkType } from "./marks/registry";
 import { readMarkType } from "./metadata";
 import type { SerializedState } from "./marks/types";
+import { isApplyingRemote } from "../collab/remoteFlag";
 
 type Action =
   | { type: "add"; object: fabric.FabricObject }
@@ -51,16 +52,19 @@ type Action =
 // object:added / object:removed listeners don't push the replay
 // action back onto the stack (which would create an infinite ping-
 // pong). Same pattern as the metadata helpers in tools/metadata.ts.
-const REPLAY = "__undoReplay" as const;
+export const REPLAY = "__undoReplay" as const;
 
 // Sentinel attached by callers (preview code, arrow postprocess,
 // text init) to suppress recording of a specific object's add/remove
 // events. Distinct from REPLAY: REPLAY is automatic and short-lived
 // (set/cleared inside onUndo); TRANSIENT is caller-controlled and
 // persists until unmarkTransient. See design doc §4.10.
-const TRANSIENT = "__transient" as const;
+export const TRANSIENT = "__transient" as const;
 
-function isFlagged(obj: fabric.FabricObject, key: string): boolean {
+// Exported so the App.tsx broadcast effect can skip objects that are
+// mid-replay or explicitly transient without depending on the hook itself.
+// See design_p3_multiplayer.md §7.6 (Check A).
+export function isFlagged(obj: fabric.FabricObject, key: string): boolean {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return Boolean((obj as any)[key]);
 }
@@ -151,6 +155,10 @@ export const useUndo = (
     const state = stateRef.current;
 
     const onAdd = ({ target }: { target: fabric.FabricObject }) => {
+      // Remote delta: applied by useRemoteCanvas on behalf of a peer.
+      // Personal undo only — remote actions must not touch the local stack.
+      // See design_p3_multiplayer.md §7.1.
+      if (isApplyingRemote()) return;
       // REPLAY: we're mid-undo; this add is the *result* of an
       // earlier remove being undone. Don't re-push.
       if (isFlagged(target, REPLAY)) return;
@@ -168,6 +176,7 @@ export const useUndo = (
     };
 
     const onRemove = ({ target }: { target: fabric.FabricObject }) => {
+      if (isApplyingRemote()) return;
       if (isFlagged(target, REPLAY)) return;
       if (isFlagged(target, TRANSIENT)) return;
       state.stack.push({ type: "remove", object: target });
@@ -179,6 +188,7 @@ export const useUndo = (
     // truth for what "state" means for each mark type; useUndo
     // treats the result opaquely.
     const onModified = ({ target }: { target: fabric.FabricObject }) => {
+      if (isApplyingRemote()) return;
       if (isFlagged(target, REPLAY)) return;
       if (isFlagged(target, TRANSIENT)) return;
       const markType = readMarkType(target);

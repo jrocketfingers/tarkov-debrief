@@ -25,14 +25,25 @@
 import * as fabric from "fabric";
 import { useCallback, useEffect, useRef } from "react";
 import { SetToolFn, Tool, ToolType } from "./tool";
+import { tagObject } from "./metadata";
+import type { OperatorId } from "../state/operators";
+import type { Phase } from "../state/phase";
 
 export const useStamp = (
   canvas: fabric.Canvas | null,
   setSidebar: (visible: boolean) => void,
   tool: Tool,
   setTool: SetToolFn,
+  activeOperatorId: OperatorId | null = null,
+  phase: Phase = "record",
 ) => {
   const markerUrlRef = useRef<string>("");
+  // Ref-mirror so the async placeMarker handler always reads the current
+  // operator/phase without needing to re-register on every change.
+  const operatorRef = useRef(activeOperatorId);
+  const phaseRef = useRef(phase);
+  operatorRef.current = activeOperatorId;
+  phaseRef.current = phase;
   const cacheRef = useRef<Record<string, fabric.Image>>({});
 
   // Core: set the active marker URL, update cursor, enter marker
@@ -110,6 +121,8 @@ export const useStamp = (
       image.top = pointer.y;
       image.scale(1 / canvas.getZoom());
 
+      // Tag before add so the broadcast effect sees __id immediately.
+      tagObject(image, operatorRef.current, phaseRef.current);
       canvas.add(image);
     };
 

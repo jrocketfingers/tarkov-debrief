@@ -18,7 +18,12 @@ export default defineConfig(() => {
       environment: 'jsdom',
       globals: true,
       setupFiles: ['./src/test/setup.ts'],
+      allowedHosts: ['caution-galleria-petal.ngrok-free.dev'],
       exclude: ['node_modules', 'build', 'e2e'],
     },
+    server: {
+      host: true,
+      allowedHosts: ['caution-galleria-petal.ngrok-free.dev']
+    }
   };
 });

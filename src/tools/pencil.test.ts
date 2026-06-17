@@ -86,6 +86,7 @@ describe("usePencil", () => {
         ),
       );
       const path = { set: vi.fn() } as unknown as fabric.FabricObject;
+      fire(mock, "before:path:created", { path });
       fire(mock, "path:created", { path });
       expect(readOperator(path)).toBe("op-alpha");
       expect(readPhase(path)).toBe("record");
@@ -104,6 +105,7 @@ describe("usePencil", () => {
         ),
       );
       const path = { set: vi.fn() } as unknown as fabric.FabricObject;
+      fire(mock, "before:path:created", { path });
       fire(mock, "path:created", { path });
       expect(readPhase(path)).toBe("plan");
     });
@@ -157,6 +159,7 @@ describe("usePencil", () => {
       rerender({ op: "op-bravo", ph: "plan" });
 
       const path = { set: vi.fn() } as unknown as fabric.FabricObject;
+      fire(mock, "before:path:created", { path });
       fire(mock, "path:created", { path });
       expect(readOperator(path)).toBe("op-bravo");
       expect(readPhase(path)).toBe("plan");

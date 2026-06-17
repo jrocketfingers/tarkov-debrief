@@ -26,6 +26,7 @@
 
 import type { MouseEvent } from "react";
 import type { Operator, OperatorId } from "@/state/operators";
+import type { PeerInfo } from "@/collab/protocol";
 import "./OperatorChips.css";
 
 export interface OperatorChipsProps {
@@ -35,6 +36,10 @@ export interface OperatorChipsProps {
   // both the operators list (visibility flag) and the active id.
   onClick: (id: OperatorId) => void;
   onShiftClick: (id: OperatorId) => void;
+  // P3.5: remote peers who have claimed a chip. Each peer whose operatorId
+  // matches a chip gets a small badge on that chip. Omitted in solo mode.
+  // §10.3
+  peers?: PeerInfo[];
 }
 
 export function OperatorChips({
@@ -42,6 +47,7 @@ export function OperatorChips({
   activeId,
   onClick,
   onShiftClick,
+  peers,
 }: OperatorChipsProps) {
   const handle = (e: MouseEvent<HTMLButtonElement>, id: OperatorId) => {
     if (e.shiftKey) {
@@ -66,6 +72,9 @@ export function OperatorChips({
         ]
           .filter(Boolean)
           .join(" ");
+        // Peers who have claimed this chip. First letter of operator name used
+        // as badge label — we have no user-display-names in P3. §10.3
+        const claimers = peers?.filter((p) => p.operatorId === op.id) ?? [];
         return (
           <button
             key={op.id}
@@ -73,7 +82,7 @@ export function OperatorChips({
             className={className}
             onClick={(e) => handle(e, op.id)}
             aria-pressed={active}
-            aria-label={`${op.name}${op.visible ? "" : " (hidden)"}`}
+            aria-label={`${op.name}${op.visible ? "" : " (hidden)"}${claimers.length > 0 ? ` (${claimers.length} peer${claimers.length !== 1 ? "s" : ""})` : ""}`}
             title={
               op.visible
                 ? "Click to activate, Shift+click to hide"
@@ -86,6 +95,18 @@ export function OperatorChips({
               aria-hidden
             />
             <span className="OperatorChip-name">{op.name}</span>
+            {claimers.length > 0 && (
+              <span className="OperatorChip-badges" aria-hidden>
+                {claimers.map((p) => (
+                  <span
+                    key={p.id}
+                    className="OperatorChip-badge"
+                    style={{ background: op.color }}
+                    data-testid={`chip-badge-${op.id}`}
+                  />
+                ))}
+              </span>
+            )}
           </button>
         );
       })}

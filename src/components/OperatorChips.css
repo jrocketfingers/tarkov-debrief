@@ -80,3 +80,25 @@
   /* Matches the wider product voice — labels read like equipment
    * tags (see DESIGN.md "Tone and voice"). */
 }
+
+/* P3.5: per-peer presence badges on claimed chips. §10.3 */
+.OperatorChip-badges {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.OperatorChip-badge {
+  /* 10×10 circle, white border so it reads against both light and
+   * dark chip backgrounds. Filled with the operator's color so it
+   * matches the chip's identity while clearly being a separate element. */
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+  opacity: 0.9;
+}

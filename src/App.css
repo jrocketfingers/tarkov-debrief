@@ -13,6 +13,30 @@ html, body {
 
 .Canvas {
   flex: 1;
+  /* position: relative makes .Canvas the containing block for absolutely-
+     positioned children: GhostCursorLayer, Scrubber, and any future
+     canvas overlays. Without this they anchor to a parent further up the
+     tree (the full .App div), causing Y-offset bugs proportional to
+     header + RoomBar height. */
+  position: relative;
+}
+
+/* P3.5: join-flow chip-claim toast. Positioned at the top-center of the canvas
+   area. pointer-events:none so it doesn't interfere with drawing. §11.2 */
+.JoinToast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #e8dcc8;
+  font-family: 'Bender', sans-serif;
+  font-size: 13px;
+  padding: 6px 14px;
+  border: 1px solid #5c513d;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
 }
 
 .App-logo {
