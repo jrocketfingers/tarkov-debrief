@@ -26,3 +26,6 @@ overrides:
   tar@<=7.5.9: '>=7.5.10'
 
 minimumReleaseAge: 7200
+minimumReleaseAgeExclude:
+  # Renovate security update: sharp@0.35.0
+  - sharp@0.35.0
