@@ -4,7 +4,7 @@ overrides:
   # 1.x → ≥1.1.13 (latest 1.x); 2.x → ≥2.0.2 (latest 2.x). Without the
   # major bound, pnpm hoists everything to brace-expansion@5 which is
   # API-incompatible with minimatch@3 (used by ESLint flat config).
-  brace-expansion@<1.1.13: '>=1.1.13 <2'
+  brace-expansion@<1.1.13: '>=5.0.7 <6'
   brace-expansion@>=2.0.0 <2.0.2: '>=2.0.2 <3'
   lodash-es@<=4.17.23: '>=4.18.0'
   lodash-es@>=4.0.0 <=4.17.22: '>=4.17.23'
@@ -26,3 +26,6 @@ overrides:
   tar@<=7.5.9: '>=7.5.10'
 
 minimumReleaseAge: 7200
+minimumReleaseAgeExclude:
+  # Renovate security update: brace-expansion@5.0.7
+  - brace-expansion@5.0.7
