@@ -26,3 +26,6 @@ overrides:
   tar@<=7.5.9: '>=7.5.10'
 
 minimumReleaseAge: 7200
+minimumReleaseAgeExclude:
+  # Renovate security update: fabric@7.4.0
+  - fabric@7.4.0
